@@ -5,13 +5,13 @@ import (
 )
 
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   interface{} `json:"error,omitempty"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+	Error   any    `json:"error,omitempty"`
 }
 
-func SuccessResponse(c *fiber.Ctx, statusCode int, message string, data interface{}) error {
+func SuccessResponse(c *fiber.Ctx, statusCode int, message string, data any) error {
 	return c.Status(statusCode).JSON(Response{
 		Success: true,
 		Message: message,
@@ -19,7 +19,7 @@ func SuccessResponse(c *fiber.Ctx, statusCode int, message string, data interfac
 	})
 }
 
-func ErrorResponse(c *fiber.Ctx, statusCode int, message string, err interface{}) error {
+func ErrorResponse(c *fiber.Ctx, statusCode int, message string, err any) error {
 	return c.Status(statusCode).JSON(Response{
 		Success: false,
 		Message: message,

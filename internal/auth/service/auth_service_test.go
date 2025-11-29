@@ -52,7 +52,7 @@ package service
 // 	return 0, nil
 // }
 
-// func (m *mockUserRepository) Update(ctx context.Context, id string, updates interface{}) error {
+// func (m *mockUserRepository) Update(ctx context.Context, id string, updates any) error {
 // 	return nil
 // }
 

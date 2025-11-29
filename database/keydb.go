@@ -55,7 +55,7 @@ func (k *KeyDB) Get(ctx context.Context, key string) (string, error) {
 }
 
 // Set stores a value in KeyDB with optional TTL
-func (k *KeyDB) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+func (k *KeyDB) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	return k.Client.Set(ctx, key, value, ttl).Err()
 }
 
@@ -81,7 +81,7 @@ func (k *KeyDB) GetKeys(ctx context.Context, pattern string) ([]string, error) {
 }
 
 // SetNX sets a value only if the key does not exist (atomic operation)
-func (k *KeyDB) SetNX(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
+func (k *KeyDB) SetNX(ctx context.Context, key string, value any, ttl time.Duration) (bool, error) {
 	return k.Client.SetNX(ctx, key, value, ttl).Result()
 }
 

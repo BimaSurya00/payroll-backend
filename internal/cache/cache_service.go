@@ -9,8 +9,8 @@ import (
 )
 
 type CacheService interface {
-	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
-	Get(ctx context.Context, key string, dest interface{}) error
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	Get(ctx context.Context, key string, dest any) error
 	Delete(ctx context.Context, keys ...string) error
 	Exists(ctx context.Context, keys ...string) (bool, error)
 	Clear(ctx context.Context, pattern string) error
@@ -25,7 +25,7 @@ func NewCacheService(keydb *database.KeyDB) CacheService {
 }
 
 // Set stores a value in cache with optional TTL
-func (s *cacheService) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+func (s *cacheService) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func (s *cacheService) Set(ctx context.Context, key string, value interface{}, t
 }
 
 // Get retrieves and unmarshals a value from cache
-func (s *cacheService) Get(ctx context.Context, key string, dest interface{}) error {
+func (s *cacheService) Get(ctx context.Context, key string, dest any) error {
 	data, err := s.keydb.Get(ctx, key)
 	if err != nil {
 		return err

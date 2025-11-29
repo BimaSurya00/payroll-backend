@@ -29,7 +29,7 @@ func GetValidator() *validator.Validate {
 	return validate
 }
 
-func ValidateStruct(s interface{}) []helper.ValidationError {
+func ValidateStruct(s any) []helper.ValidationError {
 	var errors []helper.ValidationError
 
 	err := GetValidator().Struct(s)
