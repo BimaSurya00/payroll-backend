@@ -1,0 +1,130 @@
+package helper
+
+import (
+	"fmt"
+	"math"
+)
+
+type Pagination[T any] struct {
+	CurrentPage  int          `json:"current_page"`
+	Data         []T          `json:"data"`
+	FirstPageURL string       `json:"first_page_url"`
+	From         int          `json:"from"`
+	LastPage     int          `json:"last_page"`
+	LastPageURL  string       `json:"last_page_url"`
+	Links        []Link       `json:"links"`
+	NextPageURL  *string      `json:"next_page_url"`
+	Path         string       `json:"path"`
+	PerPage      int          `json:"per_page"`
+	PrevPageURL  *string      `json:"prev_page_url"`
+	To           int          `json:"to"`
+	Total        int64        `json:"total"`
+}
+
+type Link struct {
+	URL    *string `json:"url"`
+	Label  string  `json:"label"`
+	Active bool    `json:"active"`
+}
+
+func NewPagination[T any](data []T, page, perPage int, total int64, path string) *Pagination[T] {
+	lastPage := int(math.Ceil(float64(total) / float64(perPage)))
+	from := (page-1)*perPage + 1
+	to := from + len(data) - 1
+
+	if total == 0 {
+		from = 0
+		to = 0
+	}
+
+	firstPageURL := fmt.Sprintf("%s?page=1&per_page=%d", path, perPage)
+	lastPageURL := fmt.Sprintf("%s?page=%d&per_page=%d", path, lastPage, perPage)
+
+	var nextPageURL *string
+	if page < lastPage {
+		url := fmt.Sprintf("%s?page=%d&per_page=%d", path, page+1, perPage)
+		nextPageURL = &url
+	}
+
+	var prevPageURL *string
+	if page > 1 {
+		url := fmt.Sprintf("%s?page=%d&per_page=%d", path, page-1, perPage)
+		prevPageURL = &url
+	}
+
+	links := generateLinks(page, lastPage, path, perPage)
+
+	return &Pagination[T]{
+		CurrentPage:  page,
+		Data:         data,
+		FirstPageURL: firstPageURL,
+		From:         from,
+		LastPage:     lastPage,
+		LastPageURL:  lastPageURL,
+		Links:        links,
+		NextPageURL:  nextPageURL,
+		Path:         path,
+		PerPage:      perPage,
+		PrevPageURL:  prevPageURL,
+		To:           to,
+		Total:        total,
+	}
+}
+
+func generateLinks(currentPage, lastPage int, path string, perPage int) []Link {
+	links := []Link{
+		{
+			URL:    nil,
+			Label:  "&laquo; Previous",
+			Active: false,
+		},
+	}
+
+	if currentPage > 1 {
+		url := fmt.Sprintf("%s?page=%d&per_page=%d", path, currentPage-1, perPage)
+		links[0].URL = &url
+	}
+
+	// Generate page number links
+	start := max(1, currentPage-2)
+	end := min(lastPage, currentPage+2)
+
+	for i := start; i <= end; i++ {
+		url := fmt.Sprintf("%s?page=%d&per_page=%d", path, i, perPage)
+		links = append(links, Link{
+			URL:    &url,
+			Label:  fmt.Sprintf("%d", i),
+			Active: i == currentPage,
+		})
+	}
+
+	// Next link
+	nextLink := Link{
+		URL:    nil,
+		Label:  "Next &raquo;",
+		Active: false,
+	}
+
+	if currentPage < lastPage {
+		url := fmt.Sprintf("%s?page=%d&per_page=%d", path, currentPage+1, perPage)
+		nextLink.URL = &url
+	}
+
+	links = append(links, nextLink)
+
+	return links
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
