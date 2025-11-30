@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/itsahyarr/go-fiber-boilerplate/database"
+	minioClient "github.com/itsahyarr/go-fiber-boilerplate/internal/minio"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/handler"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/service"
@@ -10,11 +11,12 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
 )
 
-func RegisterRoutes(app *fiber.App, db *database.MongoDB) {
+func RegisterRoutes(app *fiber.App, db *database.MongoDB, minioRepo minioClient.MinioRepository) {
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService)
+	minioService := minioClient.NewMinioService(minioRepo, userRepo)
+	userHandler := handler.NewUserHandler(userService, minioService)
 
 	// User routes - all require authentication
 	users := app.Group("/api/v1/users", middleware.JWTAuth())
@@ -53,5 +55,24 @@ func RegisterRoutes(app *fiber.App, db *database.MongoDB) {
 	users.Delete("/:id",
 		middleware.HasRole(constants.RoleSuperUser),
 		userHandler.DeleteUser,
+	)
+
+	// Profile Image Routes
+	// Upload profile image - USER (own), ADMIN, SUPER_USER
+	users.Post("/:id/profile-image",
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.UploadProfileImage,
+	)
+
+	// Update profile image - USER (own), ADMIN, SUPER_USER
+	users.Put("/:id/profile-image",
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.UpdateProfileImage,
+	)
+
+	// Delete profile image - USER (own), ADMIN, SUPER_USER
+	users.Delete("/:id/profile-image",
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.DeleteProfileImage,
 	)
 }

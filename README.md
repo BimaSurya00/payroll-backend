@@ -8,6 +8,7 @@ A production-ready, scalable Golang backend boilerplate using Fiber framework wi
 - **Repository Pattern**: Data access abstraction layer
 - **JWT Authentication**: Secure access and refresh token implementation with rotation
 - **RBAC (Role-Based Access Control)**: Three-tier role system (SUPER_USER, ADMIN, USER)
+- **MinIO File Storage**: S3-compatible object storage with validation and RBAC
 - **Refresh Token Security**: UUID-based refresh tokens stored in KeyDB with expiration
 - **Token Rotation**: Automatic refresh token rotation for enhanced security
 - **Multiple Databases**: MongoDB, PostgreSQL, and KeyDB/Redis support
@@ -73,7 +74,7 @@ A production-ready, scalable Golang backend boilerplate using Fiber framework wi
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/go-fiber-boilerplate.git
+git clone https://github.com/itsahyarr/go-fiber-boilerplate.git
 cd go-fiber-boilerplate
 ```
 
@@ -413,6 +414,54 @@ interface User {
 
 See [CAMELCASE_MIGRATION.md](CAMELCASE_MIGRATION.md) for complete field mapping.
 
+## 📦 MinIO File Storage
+
+Production-ready file storage with MinIO (S3-compatible):
+
+### Features
+
+- **Validated Uploads**: Max 5MB, only JPEG/PNG/WebP
+- **Organized Storage**: `users/{userId}/profile/{timestamp}-{hash}.ext`
+- **RBAC Protected**: Users can only manage their own files
+- **Automatic Cleanup**: Rollback on failed operations
+
+### Profile Image Endpoints
+
+```bash
+# Upload profile image
+POST /api/v1/users/:id/profile-image
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+
+Form Data: image=[file]
+
+# Update profile image
+PUT /api/v1/users/:id/profile-image
+
+# Delete profile image
+DELETE /api/v1/users/:id/profile-image
+```
+
+### Usage Example
+
+```typescript
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
+
+const response = await fetch(`/api/v1/users/${userId}/profile-image`, {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+
+const { data } = await response.json();
+console.log(data.imageUrl); // http://localhost:9000/fiber-app/users/92/profile/...
+```
+
+**MinIO Console**: <http://localhost:9001> (minioadmin / minioadmin)
+
+See [MINIO_IMPLEMENTATION.md](MINIO_IMPLEMENTATION.md) for complete documentation.
+
 ## 🔐 Custom Validators
 
 The boilerplate includes custom validation tags:
@@ -473,6 +522,11 @@ To add a new module, follow this structure:
 | `JWT_SECRET` | JWT signing secret | - |
 | `JWT_ACCESS_EXPIRY` | Access token expiry | `15m` |
 | `JWT_REFRESH_EXPIRY` | Refresh token expiry | `168h` |
+| `MINIO_ENDPOINT` | MinIO server endpoint | `localhost:9000` |
+| `MINIO_ACCESS_KEY` | MinIO access key | `minioadmin` |
+| `MINIO_SECRET_KEY` | MinIO secret key | `minioadmin` |
+| `MINIO_BUCKET` | MinIO bucket name | `fiber-app` |
+| `MINIO_USE_SSL` | Use SSL for MinIO | `false` |
 
 ## 🤝 Contributing
 
@@ -484,7 +538,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-Your Name - [@yourusername](https://github.com/yourusername)
+Your Name - [@itsahyarr](https://github.com/itsahyarr)
 
 ## 🙏 Acknowledgments
 

@@ -7,24 +7,26 @@ import (
 )
 
 type UserResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	IsActive  bool      `json:"isActive"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Email           string    `json:"email"`
+	Role            string    `json:"role"`
+	IsActive        bool      `json:"isActive"`
+	ProfileImageUrl string    `json:"profileImageUrl"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 func ToUserResponse(user *entity.User) *UserResponse {
 	return &UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		Role:      user.Role,
-		IsActive:  user.IsActive,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		ID:              user.ID,
+		Name:            user.Name,
+		Email:           user.Email,
+		Role:            user.Role,
+		IsActive:        user.IsActive,
+		ProfileImageUrl: user.ProfileImageUrl,
+		CreatedAt:       user.CreatedAt,
+		UpdatedAt:       user.UpdatedAt,
 	}
 }
 

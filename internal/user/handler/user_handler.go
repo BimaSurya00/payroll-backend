@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/itsahyarr/go-fiber-boilerplate/internal/minio"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/dto"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/service"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
@@ -12,11 +13,15 @@ import (
 )
 
 type UserHandler struct {
-	service service.UserService
+	service      service.UserService
+	minioService minio.MinioService
 }
 
-func NewUserHandler(service service.UserService) *UserHandler {
-	return &UserHandler{service: service}
+func NewUserHandler(service service.UserService, minioService minio.MinioService) *UserHandler {
+	return &UserHandler{
+		service:      service,
+		minioService: minioService,
+	}
 }
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
@@ -134,4 +139,110 @@ func (h *UserHandler) GetOwnProfile(c *fiber.Ctx) error {
 	}
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "Profile retrieved successfully", user)
+}
+
+// UploadProfileImage uploads a profile image for a user
+func (h *UserHandler) UploadProfileImage(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	// Get current user from context (for authorization check)
+	currentUserID := c.Locals(constants.ContextKeyUserID).(string)
+	currentUserRole := c.Locals(constants.ContextKeyUserRole).(string)
+
+	// Authorization: USER can only upload their own image
+	if currentUserRole == constants.RoleUser && currentUserID != userID {
+		return helper.ErrorResponse(c, fiber.StatusForbidden, "You can only upload your own profile image", nil)
+	}
+
+	// Parse multipart form
+	file, err := c.FormFile("image")
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Image file is required", err.Error())
+	}
+
+	// Open the file
+	fileHandle, err := file.Open()
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to open file", err.Error())
+	}
+	defer fileHandle.Close()
+
+	// Upload image
+	fileURL, err := h.minioService.UploadUserImage(c.Context(), userID, fileHandle, file)
+	if err != nil {
+		// Check if it's a validation error
+		if validationErr, ok := err.(*minio.ValidationError); ok {
+			return helper.ErrorResponse(c, fiber.StatusUnprocessableEntity, validationErr.Message, nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to upload image", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Profile image uploaded successfully", map[string]string{
+		"imageUrl": fileURL,
+	})
+}
+
+// UpdateProfileImage updates/replaces a user's profile image
+func (h *UserHandler) UpdateProfileImage(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	// Get current user from context (for authorization check)
+	currentUserID := c.Locals(constants.ContextKeyUserID).(string)
+	currentUserRole := c.Locals(constants.ContextKeyUserRole).(string)
+
+	// Authorization: USER can only update their own image
+	if currentUserRole == constants.RoleUser && currentUserID != userID {
+		return helper.ErrorResponse(c, fiber.StatusForbidden, "You can only update your own profile image", nil)
+	}
+
+	// Parse multipart form
+	file, err := c.FormFile("image")
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Image file is required", err.Error())
+	}
+
+	// Open the file
+	fileHandle, err := file.Open()
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to open file", err.Error())
+	}
+	defer fileHandle.Close()
+
+	// Update image
+	fileURL, err := h.minioService.UpdateUserImage(c.Context(), userID, fileHandle, file)
+	if err != nil {
+		// Check if it's a validation error
+		if validationErr, ok := err.(*minio.ValidationError); ok {
+			return helper.ErrorResponse(c, fiber.StatusUnprocessableEntity, validationErr.Message, nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to update image", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Profile image updated successfully", map[string]string{
+		"imageUrl": fileURL,
+	})
+}
+
+// DeleteProfileImage deletes a user's profile image
+func (h *UserHandler) DeleteProfileImage(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	// Get current user from context (for authorization check)
+	currentUserID := c.Locals(constants.ContextKeyUserID).(string)
+	currentUserRole := c.Locals(constants.ContextKeyUserRole).(string)
+
+	// Authorization: USER can only delete their own image
+	if currentUserRole == constants.RoleUser && currentUserID != userID {
+		return helper.ErrorResponse(c, fiber.StatusForbidden, "You can only delete your own profile image", nil)
+	}
+
+	// Delete image
+	if err := h.minioService.DeleteUserImage(c.Context(), userID); err != nil {
+		if err.Error() == "user has no profile image to delete" {
+			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to delete image", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Profile image deleted successfully", nil)
 }

@@ -15,6 +15,7 @@ type Config struct {
 	KeyDB    KeyDBConfig
 	JWT      JWTConfig
 	CORS     CORSConfig
+	MinIO    MinIOConfig
 }
 
 type AppConfig struct {
@@ -57,6 +58,14 @@ type JWTConfig struct {
 
 type CORSConfig struct {
 	AllowedOrigins string
+}
+
+type MinIOConfig struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
 }
 
 var GlobalConfig *Config
@@ -115,6 +124,13 @@ func LoadConfig() (*Config, error) {
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: viper.GetString("CORS_ALLOWED_ORIGINS"),
+		},
+		MinIO: MinIOConfig{
+			Endpoint:  viper.GetString("MINIO_ENDPOINT"),
+			AccessKey: viper.GetString("MINIO_ACCESS_KEY"),
+			SecretKey: viper.GetString("MINIO_SECRET_KEY"),
+			Bucket:    viper.GetString("MINIO_BUCKET"),
+			UseSSL:    viper.GetBool("MINIO_USE_SSL"),
 		},
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/config"
 	"github.com/itsahyarr/go-fiber-boilerplate/database"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth"
+	"github.com/itsahyarr/go-fiber-boilerplate/internal/minio"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user"
 	"github.com/itsahyarr/go-fiber-boilerplate/middleware"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/validator"
@@ -44,6 +45,20 @@ func main() {
 	}
 	defer keydb.Close()
 
+	// Initialize MinIO
+	minioClientInstance, err := minio.NewMinioClient(minio.MinioConfig{
+		Endpoint:  cfg.MinIO.Endpoint,
+		AccessKey: cfg.MinIO.AccessKey,
+		SecretKey: cfg.MinIO.SecretKey,
+		Bucket:    cfg.MinIO.Bucket,
+		UseSSL:    cfg.MinIO.UseSSL,
+	})
+	if err != nil {
+		log.Fatalf("Failed to connect to MinIO: %v", err)
+	}
+
+	minioRepo := minio.NewMinioRepository(minioClientInstance, cfg.MinIO.Endpoint)
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler: middleware.ErrorHandler(),
@@ -76,7 +91,7 @@ func main() {
 
 	// Register module routes
 	auth.RegisterRoutes(app, mongoDB, keydb, cfg)
-	user.RegisterRoutes(app, mongoDB)
+	user.RegisterRoutes(app, mongoDB, minioRepo)
 
 	// Start server
 	addr := cfg.App.Host + ":" + cfg.App.Port

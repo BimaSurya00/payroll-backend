@@ -11,6 +11,7 @@ type User struct {
 	Password          string `json:"-" bson:"password"`
 	Role              string `json:"role" bson:"role"`
 	IsActive          bool   `json:"isActive" bson:"isActive"`
+	ProfileImageUrl   string `json:"profileImageUrl" bson:"profileImageUrl"`
 }
 
 func NewUser(name, email, password, role string) *User {
