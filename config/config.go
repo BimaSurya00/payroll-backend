@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/spf13/viper"
@@ -43,11 +42,11 @@ type PostgresConfig struct {
 }
 
 type KeyDBConfig struct {
-	Host        string
-	Port        string
-	Password    string
-	DB          int
-	MaxRetries  int
+	Host       string
+	Port       string
+	Password   string
+	DB         int
+	MaxRetries int
 }
 
 type JWTConfig struct {
@@ -68,8 +67,6 @@ type MinIOConfig struct {
 	UseSSL    bool
 }
 
-var GlobalConfig *Config
-
 func LoadConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -78,14 +75,16 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	accessExpiry, err := time.ParseDuration(viper.GetString("JWT_ACCESS_EXPIRY"))
+	accessExpiryStr := viper.GetString("JWT_ACCESS_EXPIRY")
+	accessExpiry, err := time.ParseDuration(accessExpiryStr)
 	if err != nil {
-		log.Fatalf("Invalid JWT_ACCESS_EXPIRY format: %v", err)
+		return nil, fmt.Errorf("invalid JWT_ACCESS_EXPIRY format: %w", err)
 	}
 
-	refreshExpiry, err := time.ParseDuration(viper.GetString("JWT_REFRESH_EXPIRY"))
+	refreshExpiryStr := viper.GetString("JWT_REFRESH_EXPIRY")
+	refreshExpiry, err := time.ParseDuration(refreshExpiryStr)
 	if err != nil {
-		log.Fatalf("Invalid JWT_REFRESH_EXPIRY format: %v", err)
+		return nil, fmt.Errorf("invalid JWT_REFRESH_EXPIRY format: %w", err)
 	}
 
 	config := &Config{
@@ -138,7 +137,6 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	GlobalConfig = config
 	return config, nil
 }
 

@@ -3,13 +3,13 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/itsahyarr/go-fiber-boilerplate/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.uber.org/zap"
 )
 
 type MongoDB struct {
@@ -36,7 +36,7 @@ func NewMongoDB(cfg config.MongoDBConfig) (*MongoDB, error) {
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 
-	log.Println("✅ Connected to MongoDB successfully")
+	zap.L().Info("connected to MongoDB successfully", zap.String("database", cfg.Database))
 
 	return &MongoDB{
 		Client:   client,
@@ -52,7 +52,7 @@ func (m *MongoDB) Close() error {
 		return fmt.Errorf("failed to disconnect from MongoDB: %w", err)
 	}
 
-	log.Println("✅ MongoDB connection closed")
+	zap.L().Info("MongoDB connection closed")
 	return nil
 }
 

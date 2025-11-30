@@ -1,17 +1,20 @@
 package middleware
 
 import (
-	"log"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/errs"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
+	"go.uber.org/zap"
 )
 
 func ErrorHandler() fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		// Log the error
-		log.Printf("Error: %v", err)
+		zap.L().Error("unhandled error",
+			zap.Error(err),
+			zap.String("path", c.Path()),
+			zap.String("method", c.Method()),
+		)
 
 		// Check if it's a custom app error
 		if appErr, ok := err.(*errs.AppError); ok {

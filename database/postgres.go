@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/itsahyarr/go-fiber-boilerplate/config"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 type Postgres struct {
@@ -43,12 +43,12 @@ func NewPostgres(cfg config.PostgresConfig) (*Postgres, error) {
 		return nil, fmt.Errorf("failed to ping postgres: %w", err)
 	}
 
-	log.Println("✅ Connected to PostgreSQL successfully")
+	zap.L().Info("connected to PostgreSQL successfully", zap.String("database", cfg.Database))
 
 	return &Postgres{Pool: pool}, nil
 }
 
 func (p *Postgres) Close() {
 	p.Pool.Close()
-	log.Println("✅ PostgreSQL connection closed")
+	zap.L().Info("PostgreSQL connection closed")
 }

@@ -17,6 +17,13 @@ import (
 	sharedHelper "github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
 )
 
+var (
+    ErrEmailAlreadyExists = errors.New("email already exists")
+    ErrInvalidCredentials = errors.New("invalid credentials")
+    ErrAccountDeactivated = errors.New("account is deactivated")
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+)
+
 type AuthService interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error)
@@ -49,7 +56,7 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	// Check if email already exists
 	existingUser, _ := s.userRepo.FindByEmail(ctx, req.Email)
 	if existingUser != nil {
-		return nil, errors.New("email already exists")
+		return nil, ErrEmailAlreadyExists
 	}
 
 	// Hash password
@@ -88,17 +95,17 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	// Find user by email
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	// Check password
 	if !sharedHelper.CheckPassword(user.Password, req.Password) {
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		return nil, errors.New("account is deactivated")
+		return nil, ErrAccountDeactivated
 	}
 
 	// Generate token pair
@@ -124,7 +131,7 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 func (s *authService) RefreshToken(ctx context.Context, req *dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
 	// Validate refresh token format (should be UUID)
 	if req.RefreshToken == "" {
-		return nil, errors.New("invalid refresh token")
+		return nil, ErrInvalidRefreshToken
 	}
 
 	// Extract user ID from token ID (we need to get it from KeyDB)

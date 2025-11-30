@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
 	sharedHelper "github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
 	"go.mongodb.org/mongo-driver/bson"
+)
+
+var (
+	ErrUserNotFound       = errors.New("user not found")
+	ErrEmailAlreadyExists = errors.New("email already exists")
 )
 
 type UserService interface {
@@ -31,9 +37,12 @@ func NewUserService(repo repository.UserRepository) UserService {
 
 func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest) (*dto.UserResponse, error) {
 	// Check if email already exists
-	existingUser, _ := s.repo.FindByEmail(ctx, req.Email)
+	existingUser, err := s.repo.FindByEmail(ctx, req.Email)
+	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, fmt.Errorf("failed to check existing email: %w", err)
+	}
 	if existingUser != nil {
-		return nil, fmt.Errorf("email already exists")
+		return nil, ErrEmailAlreadyExists
 	}
 
 	// Hash password
@@ -76,6 +85,9 @@ func (s *userService) GetUsers(ctx context.Context, page, perPage int, path stri
 func (s *userService) GetUserByID(ctx context.Context, id string) (*dto.UserResponse, error) {
 	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
@@ -90,12 +102,15 @@ func (s *userService) UpdateUser(ctx context.Context, id string, req *dto.Update
 	// Check if user exists
 	_, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
 	// Build update map
 	updates := bson.M{
-		"updated_at": time.Now(),
+		"updatedAt": time.Now(),
 	}
 
 	if req.Name != nil {
@@ -103,10 +118,12 @@ func (s *userService) UpdateUser(ctx context.Context, id string, req *dto.Update
 	}
 
 	if req.Email != nil {
-		// Check if new email already exists
-		existingUser, _ := s.repo.FindByEmail(ctx, *req.Email)
+		existingUser, err := s.repo.FindByEmail(ctx, *req.Email)
+		if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+			return nil, fmt.Errorf("failed to check existing email: %w", err)
+		}
 		if existingUser != nil && existingUser.ID != id {
-			return nil, fmt.Errorf("email already exists")
+			return nil, ErrEmailAlreadyExists
 		}
 		updates["email"] = *req.Email
 	}
@@ -135,6 +152,9 @@ func (s *userService) UpdateUser(ctx context.Context, id string, req *dto.Update
 	// Fetch updated user
 	updatedUser, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
@@ -142,5 +162,11 @@ func (s *userService) UpdateUser(ctx context.Context, id string, req *dto.Update
 }
 
 func (s *userService) DeleteUser(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	return nil
 }

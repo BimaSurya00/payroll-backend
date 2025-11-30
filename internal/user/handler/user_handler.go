@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -38,7 +39,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	user, err := h.service.CreateUser(c.Context(), &req)
 	if err != nil {
-		if err.Error() == "email already exists" {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
 			return helper.ErrorResponse(c, fiber.StatusConflict, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to create user", err.Error())
@@ -73,7 +74,7 @@ func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 
 	user, err := h.service.GetUserByID(c.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if errors.Is(err, service.ErrUserNotFound) {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch user", err.Error())
@@ -101,10 +102,10 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 
 	user, err := h.service.UpdateUser(c.Context(), id, &req)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if errors.Is(err, service.ErrUserNotFound) {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
-		if err.Error() == "email already exists" {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
 			return helper.ErrorResponse(c, fiber.StatusConflict, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to update user", err.Error())
@@ -117,7 +118,7 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	if err := h.service.DeleteUser(c.Context(), id); err != nil {
-		if err.Error() == "user not found" {
+		if errors.Is(err, service.ErrUserNotFound) {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to delete user", err.Error())
@@ -132,7 +133,7 @@ func (h *UserHandler) GetOwnProfile(c *fiber.Ctx) error {
 
 	user, err := h.service.GetUserByID(c.Context(), userID)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if errors.Is(err, service.ErrUserNotFound) {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch profile", err.Error())
@@ -238,7 +239,7 @@ func (h *UserHandler) DeleteProfileImage(c *fiber.Ctx) error {
 
 	// Delete image
 	if err := h.minioService.DeleteUserImage(c.Context(), userID); err != nil {
-		if err.Error() == "user has no profile image to delete" {
+		if errors.Is(err, minio.ErrUserHasNoProfileImageToDelete) {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to delete image", err.Error())

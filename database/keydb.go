@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/itsahyarr/go-fiber-boilerplate/config"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type KeyDB struct {
@@ -32,7 +32,10 @@ func NewKeyDB(cfg config.KeyDBConfig) (*KeyDB, error) {
 		return nil, fmt.Errorf("failed to connect to KeyDB: %w", err)
 	}
 
-	log.Println("✅ Connected to KeyDB successfully")
+	zap.L().Info("connected to KeyDB successfully",
+		zap.String("host", cfg.Host),
+		zap.String("port", cfg.Port),
+	)
 
 	return &KeyDB{Client: client}, nil
 }
@@ -41,7 +44,7 @@ func (k *KeyDB) Close() error {
 	if err := k.Client.Close(); err != nil {
 		return fmt.Errorf("failed to close KeyDB connection: %w", err)
 	}
-	log.Println("✅ KeyDB connection closed")
+	zap.L().Info("KeyDB connection closed")
 	return nil
 }
 

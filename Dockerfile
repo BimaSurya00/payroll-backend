@@ -1,8 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache git make
+FROM golang:1.24-buster AS builder
 
 # Set working directory
 WORKDIR /app
@@ -20,16 +17,13 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Final stage
-FROM alpine:latest
+FROM gcr.io/distroless/static:nonroot
 
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
+# Set working directory
+WORKDIR /app
 
 # Copy binary from builder
 COPY --from=builder /app/main .
-COPY --from=builder /app/.env .
 
 # Expose port
 EXPOSE 8080

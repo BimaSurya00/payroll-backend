@@ -3,11 +3,11 @@ package minio
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
 
 type MinioConfig struct {
@@ -49,7 +49,7 @@ func NewMinioClient(cfg MinioConfig) (*MinioClient, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create bucket: %w", err)
 		}
-		log.Printf("✅ MinIO bucket '%s' created successfully", cfg.Bucket)
+		zap.L().Info("MinIO bucket created successfully", zap.String("bucket", cfg.Bucket))
 	}
 
 	// Set bucket policy to public read (for images)
@@ -67,10 +67,10 @@ func NewMinioClient(cfg MinioConfig) (*MinioClient, error) {
 
 	err = client.SetBucketPolicy(ctx, cfg.Bucket, policy)
 	if err != nil {
-		log.Printf("⚠️  Warning: Failed to set bucket policy: %v", err)
+		zap.L().Warn("failed to set bucket policy", zap.Error(err), zap.String("bucket", cfg.Bucket))
 	}
 
-	log.Printf("✅ Connected to MinIO at %s", cfg.Endpoint)
+	zap.L().Info("connected to MinIO", zap.String("endpoint", cfg.Endpoint))
 
 	return &MinioClient{
 		Client: client,

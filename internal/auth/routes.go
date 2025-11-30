@@ -8,10 +8,15 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/repository"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/service"
 	userRepo "github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
-	"github.com/itsahyarr/go-fiber-boilerplate/middleware"
 )
 
-func RegisterRoutes(app *fiber.App, db *database.MongoDB, keydb *database.KeyDB, cfg *config.Config) {
+func RegisterRoutes(
+	app *fiber.App,
+	db *database.MongoDB,
+	keydb *database.KeyDB,
+	cfg *config.Config,
+	jwtAuth fiber.Handler,
+) {
 	// Initialize dependencies
 	userRepository := userRepo.NewUserRepository(db)
 	tokenRepository := repository.NewTokenRepository(keydb)
@@ -24,9 +29,9 @@ func RegisterRoutes(app *fiber.App, db *database.MongoDB, keydb *database.KeyDB,
 	// Public routes
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.RefreshToken) // No auth required for refresh
+	auth.Post("/refresh", authHandler.RefreshToken)
 
 	// Protected routes
-	auth.Post("/logout", middleware.JWTAuth(), authHandler.Logout)
-	auth.Post("/logout-all", middleware.JWTAuth(), authHandler.LogoutAll) // Logout from all devices
+	auth.Post("/logout", jwtAuth, authHandler.Logout)
+	auth.Post("/logout-all", jwtAuth, authHandler.LogoutAll)
 }

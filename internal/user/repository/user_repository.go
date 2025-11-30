@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/itsahyarr/go-fiber-boilerplate/database"
@@ -9,6 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserRepository interface {
@@ -44,7 +49,7 @@ func (r *userRepository) FindByID(ctx context.Context, id string) (*entity.User,
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, fmt.Errorf("user not found")
+			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
@@ -56,7 +61,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity
 	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, fmt.Errorf("user not found")
+			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
@@ -102,7 +107,7 @@ func (r *userRepository) Update(ctx context.Context, id string, updates bson.M) 
 	}
 
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	return nil
@@ -115,7 +120,7 @@ func (r *userRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	if result.DeletedCount == 0 {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	return nil

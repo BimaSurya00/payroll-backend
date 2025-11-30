@@ -11,7 +11,7 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
 )
 
-func RegisterRoutes(app *fiber.App, db *database.MongoDB, minioRepo minioClient.MinioRepository) {
+func RegisterRoutes(app *fiber.App, db *database.MongoDB, minioRepo minioClient.MinioRepository, jwtAuth fiber.Handler) {
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
@@ -19,7 +19,7 @@ func RegisterRoutes(app *fiber.App, db *database.MongoDB, minioRepo minioClient.
 	userHandler := handler.NewUserHandler(userService, minioService)
 
 	// User routes - all require authentication
-	users := app.Group("/api/v1/users", middleware.JWTAuth())
+	users := app.Group("/api/v1/users", jwtAuth)
 
 	// Get own profile - accessible by all authenticated users (USER, ADMIN, SUPER_USER)
 	users.Get("/me",

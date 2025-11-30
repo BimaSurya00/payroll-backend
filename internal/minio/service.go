@@ -14,6 +14,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var (
+	ErrUserHasNoProfileImageToDelete = errors.New("user has no profile image to delete")
+)
+
 type MinioService interface {
 	UploadUserImage(ctx context.Context, userID string, file multipart.File, header *multipart.FileHeader) (string, error)
 	UpdateUserImage(ctx context.Context, userID string, file multipart.File, header *multipart.FileHeader) (string, error)
@@ -131,7 +135,7 @@ func (s *minioService) DeleteUserImage(ctx context.Context, userID string) error
 
 	// Check if user has a profile image
 	if user.ProfileImageUrl == "" {
-		return errors.New("user has no profile image to delete")
+		return ErrUserHasNoProfileImageToDelete
 	}
 
 	// Extract object name from URL

@@ -1,12 +1,21 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/dto"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/service"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
 	"github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
 	customValidator "github.com/itsahyarr/go-fiber-boilerplate/shared/validator"
+)
+
+var (
+	ErrEmailAlreadyExists  = errors.New("email already exists")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrAccountDeactivated  = errors.New("account is deactivated")
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 )
 
 type AuthHandler struct {
@@ -31,7 +40,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	result, err := h.service.Register(c.Context(), &req)
 	if err != nil {
-		if err.Error() == "email already exists" {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
 			return helper.ErrorResponse(c, fiber.StatusConflict, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Registration failed", err.Error())
@@ -54,7 +63,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	result, err := h.service.Login(c.Context(), &req)
 	if err != nil {
-		if err.Error() == "invalid credentials" || err.Error() == "account is deactivated" {
+		if errors.Is(err, service.ErrInvalidCredentials) ||
+			errors.Is(err, service.ErrAccountDeactivated) {
 			return helper.ErrorResponse(c, fiber.StatusUnauthorized, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Login failed", err.Error())

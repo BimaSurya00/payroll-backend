@@ -10,7 +10,9 @@ import (
 	sharedHelper "github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
 )
 
-func JWTAuth() fiber.Handler {
+func JWTAuth(jwtCfg *config.JWTConfig) fiber.Handler {
+	jwtHelper := helper.NewJWTHelper(jwtCfg)
+
 	return func(c *fiber.Ctx) error {
 		// Get token from Authorization header
 		authHeader := c.Get("Authorization")
@@ -26,14 +28,12 @@ func JWTAuth() fiber.Handler {
 
 		tokenString := parts[1]
 
-		// Validate token
-		jwtHelper := helper.NewJWTHelper(&config.GlobalConfig.JWT)
+		// Validate token (now using the pre‑built helper)
 		claims, err := jwtHelper.ValidateAccessToken(tokenString)
 		if err != nil {
 			return sharedHelper.ErrorResponse(c, fiber.StatusUnauthorized, "Invalid or expired token", err.Error())
 		}
 
-		// Verify it's an access token (already checked in ValidateAccessToken)
 		// Set user info in context
 		c.Locals(constants.ContextKeyUserID, claims.UserID)
 		c.Locals(constants.ContextKeyUserRole, claims.Role)
