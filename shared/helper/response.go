@@ -5,25 +5,28 @@ import (
 )
 
 type Response struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-	Error   any    `json:"error,omitempty"`
+	Success    bool   `json:"success"`
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+	Data       any    `json:"data,omitempty"`
+	Error      any    `json:"error,omitempty"`
 }
 
 func SuccessResponse(c *fiber.Ctx, statusCode int, message string, data any) error {
 	return c.Status(statusCode).JSON(Response{
-		Success: true,
-		Message: message,
-		Data:    data,
+		Success:    true,
+		StatusCode: statusCode,
+		Message:    message,
+		Data:       data,
 	})
 }
 
 func ErrorResponse(c *fiber.Ctx, statusCode int, message string, err any) error {
 	return c.Status(statusCode).JSON(Response{
-		Success: false,
-		Message: message,
-		Error:   err,
+		Success:    false,
+		StatusCode: statusCode,
+		Message:    message,
+		Error:      err,
 	})
 }
 
@@ -34,8 +37,9 @@ type ValidationError struct {
 
 func ValidationErrorResponse(c *fiber.Ctx, errors []ValidationError) error {
 	return c.Status(fiber.StatusUnprocessableEntity).JSON(Response{
-		Success: false,
-		Message: "Validation failed",
-		Error:   errors,
+		Success:    false,
+		StatusCode: fiber.StatusUnprocessableEntity,
+		Message:    "Validation failed",
+		Error:      errors,
 	})
 }
