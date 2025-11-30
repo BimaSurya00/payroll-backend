@@ -120,3 +120,18 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "User deleted successfully", nil)
 }
+
+// GetOwnProfile returns the authenticated user's profile
+func (h *UserHandler) GetOwnProfile(c *fiber.Ctx) error {
+	userID := c.Locals(constants.ContextKeyUserID).(string)
+
+	user, err := h.service.GetUserByID(c.Context(), userID)
+	if err != nil {
+		if err.Error() == "user not found" {
+			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch profile", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Profile retrieved successfully", user)
+}

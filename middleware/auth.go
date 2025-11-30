@@ -42,19 +42,42 @@ func JWTAuth() fiber.Handler {
 	}
 }
 
-func RequireRole(roles ...string) fiber.Handler {
+// HasRole checks if the user has one of the required roles
+// SUPER_USER automatically has access to everything
+func HasRole(requiredRoles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Get user role from context (set by JWTAuth middleware)
 		userRole, ok := c.Locals(constants.ContextKeyUserRole).(string)
 		if !ok {
-			return sharedHelper.ErrorResponse(c, fiber.StatusUnauthorized, "User role not found", nil)
+			return sharedHelper.ErrorResponse(c, fiber.StatusUnauthorized, "User role not found in context", nil)
 		}
 
-		for _, role := range roles {
+		// SUPER_USER has access to everything (best practice)
+		if userRole == constants.RoleSuperUser {
+			return c.Next()
+		}
+
+		// Check if user's role is in the required roles
+		for _, role := range requiredRoles {
 			if userRole == role {
 				return c.Next()
 			}
 		}
 
-		return sharedHelper.ErrorResponse(c, fiber.StatusForbidden, "Insufficient permissions", nil)
+		// User doesn't have required role
+		return sharedHelper.ErrorResponse(
+			c,
+			fiber.StatusForbidden,
+			"Insufficient permissions",
+			map[string]interface{}{
+				"required": requiredRoles,
+				"actual":   userRole,
+			},
+		)
 	}
+}
+
+// RequireRole is an alias for HasRole for backward compatibility
+func RequireRole(roles ...string) fiber.Handler {
+	return HasRole(roles...)
 }

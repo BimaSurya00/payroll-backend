@@ -7,13 +7,15 @@ A production-ready, scalable Golang backend boilerplate using Fiber framework wi
 - **Clean Architecture**: Modular design with clear separation of concerns
 - **Repository Pattern**: Data access abstraction layer
 - **JWT Authentication**: Secure access and refresh token implementation with rotation
+- **RBAC (Role-Based Access Control)**: Three-tier role system (SUPER_USER, ADMIN, USER)
 - **Refresh Token Security**: UUID-based refresh tokens stored in KeyDB with expiration
 - **Token Rotation**: Automatic refresh token rotation for enhanced security
 - **Multiple Databases**: MongoDB, PostgreSQL, and KeyDB/Redis support
 - **Validation**: Comprehensive request validation with custom validators
 - **Pagination**: Laravel-style pagination helper
+- **camelCase API**: Modern JSON responses with camelCase field names
 - **Error Handling**: Centralized error management
-- **Middleware**: Authentication, logging, recovery, and CORS
+- **Middleware**: Authentication, logging, recovery, CORS, and RBAC
 - **Docker Support**: Modern multi-container setup with health checks
 - **Testing**: Unit tests with mock repositories
 - **Makefile**: Convenient development commands
@@ -71,7 +73,7 @@ A production-ready, scalable Golang backend boilerplate using Fiber framework wi
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/itsahyarr/go-fiber-boilerplate.git
+git clone https://github.com/yourusername/go-fiber-boilerplate.git
 cd go-fiber-boilerplate
 ```
 
@@ -160,8 +162,8 @@ POST /api/v1/auth/refresh
 Content-Type: application/json
 
 {
-  "refresh_token": "your-refresh-token-uuid",
-  "user_id": "user-id-here"
+  "refreshToken": "your-refresh-token-uuid",
+  "userId": "user-id-here"
 }
 ```
 
@@ -173,10 +175,10 @@ Content-Type: application/json
   "message": "Token refreshed successfully",
   "data": {
     "user": {...},
-    "access_token": "new-access-token",
-    "refresh_token": "new-refresh-token-uuid",
-    "expires_at": 1234567890,
-    "token_type": "Bearer"
+    "accessToken": "new-access-token",
+    "refreshToken": "new-refresh-token-uuid",
+    "expiresAt": 1234567890,
+    "tokenType": "Bearer"
   }
 }
 ```
@@ -191,7 +193,7 @@ Authorization: Bearer your-access-token
 Content-Type: application/json
 
 {
-  "refresh_token": "refresh-token-to-revoke"
+  "refreshToken": "refresh-token-to-revoke"
 }
 ```
 
@@ -208,6 +210,15 @@ This endpoint revokes all refresh tokens for the user, logging them out from all
 
 All user endpoints require authentication (Bearer token).
 
+#### Get Own Profile
+
+```http
+GET /api/v1/users/me
+Authorization: Bearer your-access-token
+```
+
+**Accessible by:** USER, ADMIN, SUPER_USER
+
 #### Create User
 
 ```http
@@ -219,9 +230,11 @@ Content-Type: application/json
   "name": "Jane Doe",
   "email": "jane@example.com",
   "password": "Password123!",
-  "role": "user"
+  "role": "USER"
 }
 ```
+
+**Accessible by:** ADMIN, SUPER_USER
 
 #### Get Users (Paginated)
 
@@ -230,12 +243,16 @@ GET /api/v1/users?page=1&per_page=15
 Authorization: Bearer your-access-token
 ```
 
+**Accessible by:** ADMIN, SUPER_USER
+
 #### Get User by ID
 
 ```http
 GET /api/v1/users/:id
 Authorization: Bearer your-access-token
 ```
+
+**Accessible by:** ADMIN, SUPER_USER
 
 #### Update User
 
@@ -250,12 +267,16 @@ Content-Type: application/json
 }
 ```
 
+**Accessible by:** ADMIN, SUPER_USER
+
 #### Delete User
 
 ```http
 DELETE /api/v1/users/:id
 Authorization: Bearer your-access-token
 ```
+
+**Accessible by:** SUPER_USER only
 
 ## 🔐 Refresh Token Security
 
@@ -302,6 +323,96 @@ TTL: Automatically expires after 7 days
 - **Single Device**: `POST /auth/logout` with specific refresh token
 - **All Devices**: `POST /auth/logout-all` revokes all user's refresh tokens
 
+## 🛡️ Role-Based Access Control (RBAC)
+
+This boilerplate implements production-grade RBAC with three roles:
+
+### Role Hierarchy
+
+```
+SUPER_USER → Full system access (automatically bypasses all role checks)
+ADMIN      → Administrative access (manage users and resources)
+USER       → Basic access (own resources only)
+```
+
+### User Module Access Matrix
+
+| Endpoint | Method | Allowed Roles | Description |
+|----------|--------|---------------|-------------|
+| `/users/me` | GET | USER, ADMIN, SUPER_USER | Get own profile |
+| `/users` | POST | ADMIN, SUPER_USER | Create new user |
+| `/users` | GET | ADMIN, SUPER_USER | List all users |
+| `/users/:id` | GET | ADMIN, SUPER_USER | Get user by ID |
+| `/users/:id` | PATCH | ADMIN, SUPER_USER | Update user |
+| `/users/:id` | DELETE | SUPER_USER | Delete user |
+
+### RBAC Examples
+
+```bash
+# USER accessing own profile - ✅ Allowed
+curl -X GET http://localhost:8080/api/v1/users/me \
+  -H "Authorization: Bearer <USER_TOKEN>"
+
+# USER trying to list all users - ❌ 403 Forbidden
+curl -X GET http://localhost:8080/api/v1/users \
+  -H "Authorization: Bearer <USER_TOKEN>"
+
+# ADMIN creating a user - ✅ Allowed
+curl -X POST http://localhost:8080/api/v1/users \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -d '{"name":"New User","email":"user@example.com","password":"Pass123!","role":"USER"}'
+
+# SUPER_USER deleting a user - ✅ Allowed
+curl -X DELETE http://localhost:8080/api/v1/users/123 \
+  -H "Authorization: Bearer <SUPER_USER_TOKEN>"
+```
+
+**Key Feature**: SUPER_USER automatically has access to ALL endpoints, regardless of role requirements.
+
+See [RBAC_IMPLEMENTATION.md](RBAC_IMPLEMENTATION.md) for complete documentation.
+
+## 🎨 camelCase API Responses
+
+All JSON responses use camelCase naming convention for seamless frontend integration:
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "USER",
+      "isActive": true,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
+    "accessToken": "eyJhbGci...",
+    "refreshToken": "uuid-here",
+    "expiresAt": 1701345678,
+    "tokenType": "Bearer"
+  }
+}
+```
+
+**TypeScript interfaces match perfectly** - no transformation needed!
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+See [CAMELCASE_MIGRATION.md](CAMELCASE_MIGRATION.md) for complete field mapping.
+
 ## 🔐 Custom Validators
 
 The boilerplate includes custom validation tags:
@@ -320,21 +431,21 @@ type CreateUserRequest struct {
 
 ## 📊 Pagination Format
 
-Pagination follows Laravel 11 format:
+Pagination follows Laravel 11 format with camelCase:
 
 ```json
 {
-  "current_page": 1,
+  "currentPage": 1,
   "data": [...],
-  "first_page_url": "http://localhost:8080/api/v1/users?page=1&per_page=15",
+  "firstPageUrl": "http://localhost:8080/api/v1/users?page=1&per_page=15",
   "from": 1,
-  "last_page": 5,
-  "last_page_url": "http://localhost:8080/api/v1/users?page=5&per_page=15",
+  "lastPage": 5,
+  "lastPageUrl": "http://localhost:8080/api/v1/users?page=5&per_page=15",
   "links": [...],
-  "next_page_url": "http://localhost:8080/api/v1/users?page=2&per_page=15",
+  "nextPageUrl": "http://localhost:8080/api/v1/users?page=2&per_page=15",
   "path": "http://localhost:8080/api/v1/users",
-  "per_page": 15,
-  "prev_page_url": null,
+  "perPage": 15,
+  "prevPageUrl": null,
   "to": 15,
   "total": 67
 }
@@ -373,7 +484,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-Your Name - [@itsahyarr](https://github.com/itsahyarr)
+Your Name - [@yourusername](https://github.com/yourusername)
 
 ## 🙏 Acknowledgments
 

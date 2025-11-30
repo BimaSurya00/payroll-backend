@@ -1,9 +1,10 @@
 package constants
 
 const (
-	// User Roles
-	RoleAdmin = "admin"
-	RoleUser  = "user"
+	// User Roles (RBAC)
+	RoleSuperUser = "SUPER_USER"
+	RoleAdmin     = "ADMIN"
+	RoleUser      = "USER"
 
 	// Token Types
 	TokenTypeAccess  = "access"

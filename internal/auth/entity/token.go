@@ -3,20 +3,20 @@ package entity
 import "time"
 
 type TokenPair struct {
-	AccessToken       string `json:"access_token"`
-	RefreshToken      string `json:"refresh_token"`
-	AccessTokenExpiry int64  `json:"access_token_expiry"`
+	AccessToken       string `json:"accessToken"`
+	RefreshToken      string `json:"refreshToken"`
+	AccessTokenExpiry int64  `json:"accessTokenExpiry"`
 }
 
 type TokenClaims struct {
-	UserID string `json:"user_id"`
+	UserID string `json:"userId"`
 	Role   string `json:"role"`
 	Type   string `json:"type"`
 }
 
 type RefreshTokenData struct {
-	TokenID   string    `json:"token_id"`
-	UserID    string    `json:"user_id"`
-	ExpiresAt time.Time `json:"expires_at"`
-	CreatedAt time.Time `json:"created_at"`
+	TokenID   string    `json:"tokenId"`
+	UserID    string    `json:"userId"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	CreatedAt time.Time `json:"createdAt"`
 }

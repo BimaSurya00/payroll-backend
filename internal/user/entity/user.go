@@ -10,7 +10,7 @@ type User struct {
 	Email             string `json:"email" bson:"email"`
 	Password          string `json:"-" bson:"password"`
 	Role              string `json:"role" bson:"role"`
-	IsActive          bool   `json:"is_active" bson:"is_active"`
+	IsActive          bool   `json:"isActive" bson:"isActive"`
 }
 
 func NewUser(name, email, password, role string) *User {

@@ -7,6 +7,7 @@ import (
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
 	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/service"
 	"github.com/itsahyarr/go-fiber-boilerplate/middleware"
+	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
 )
 
 func RegisterRoutes(app *fiber.App, db *database.MongoDB) {
@@ -15,13 +16,42 @@ func RegisterRoutes(app *fiber.App, db *database.MongoDB) {
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
 
-	// User routes
-	users := app.Group("/api/v1/users")
-	users.Use(middleware.JWTAuth()) // Protected routes
+	// User routes - all require authentication
+	users := app.Group("/api/v1/users", middleware.JWTAuth())
 
-	users.Post("/", userHandler.CreateUser)
-	users.Get("/", userHandler.GetUsers)
-	users.Get("/:id", userHandler.GetUserByID)
-	users.Patch("/:id", userHandler.UpdateUser)
-	users.Delete("/:id", userHandler.DeleteUser)
+	// Get own profile - accessible by all authenticated users (USER, ADMIN, SUPER_USER)
+	users.Get("/me",
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.GetOwnProfile,
+	)
+
+	// Create user - ADMIN and SUPER_USER only
+	users.Post("/",
+		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.CreateUser,
+	)
+
+	// Get all users (paginated) - ADMIN and SUPER_USER only
+	users.Get("/",
+		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.GetUsers,
+	)
+
+	// Get user by ID - ADMIN and SUPER_USER only
+	users.Get("/:id",
+		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.GetUserByID,
+	)
+
+	// Update user - ADMIN and SUPER_USER only
+	users.Patch("/:id",
+		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		userHandler.UpdateUser,
+	)
+
+	// Delete user - SUPER_USER only
+	users.Delete("/:id",
+		middleware.HasRole(constants.RoleSuperUser),
+		userHandler.DeleteUser,
+	)
 }
