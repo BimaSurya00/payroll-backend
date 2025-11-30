@@ -69,7 +69,7 @@ func HasRole(requiredRoles ...string) fiber.Handler {
 			c,
 			fiber.StatusForbidden,
 			"Insufficient permissions",
-			map[string]interface{}{
+			map[string]any{
 				"required": requiredRoles,
 				"actual":   userRole,
 			},
