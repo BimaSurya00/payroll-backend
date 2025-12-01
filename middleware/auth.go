@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -58,10 +59,8 @@ func HasRole(requiredRoles ...string) fiber.Handler {
 		}
 
 		// Check if user's role is in the required roles
-		for _, role := range requiredRoles {
-			if userRole == role {
-				return c.Next()
-			}
+		if slices.Contains(requiredRoles, userRole) {
+			return c.Next()
 		}
 
 		// User doesn't have required role
