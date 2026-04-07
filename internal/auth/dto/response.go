@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/itsahyarr/go-fiber-boilerplate/internal/user/dto"
+import "hris/internal/user/dto"
 
 type AuthResponse struct {
 	User         *dto.UserResponse `json:"user"`

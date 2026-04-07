@@ -11,8 +11,9 @@ const (
 	TokenTypeRefresh = "refresh"
 
 	// Context Keys
-	ContextKeyUserID   = "user_id"
-	ContextKeyUserRole = "user_role"
+	ContextKeyUserID    = "user_id"
+	ContextKeyUserRole  = "user_role"
+	ContextKeyCompanyID = "company_id"
 
 	// Cache Keys
 	CacheKeyRefreshToken       = "refresh_token:"

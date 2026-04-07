@@ -6,9 +6,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/itsahyarr/go-fiber-boilerplate/config"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/entity"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
+	"hris/config"
+	"hris/internal/auth/entity"
+	"hris/shared/constants"
 )
 
 type JWTHelper struct {
@@ -19,9 +19,9 @@ func NewJWTHelper(cfg *config.JWTConfig) *JWTHelper {
 	return &JWTHelper{config: cfg}
 }
 
-func (h *JWTHelper) GenerateTokenPair(userID, role string) (*entity.TokenPair, string, error) {
+func (h *JWTHelper) GenerateTokenPair(userID, role, companyID string) (*entity.TokenPair, string, error) {
 	// Generate access token (JWT)
-	accessToken, accessExpiry, err := h.generateAccessToken(userID, role)
+	accessToken, accessExpiry, err := h.generateAccessToken(userID, role, companyID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -36,16 +36,17 @@ func (h *JWTHelper) GenerateTokenPair(userID, role string) (*entity.TokenPair, s
 	}, refreshTokenID, nil
 }
 
-func (h *JWTHelper) generateAccessToken(userID, role string) (string, time.Time, error) {
+func (h *JWTHelper) generateAccessToken(userID, role, companyID string) (string, time.Time, error) {
 	expiryTime := time.Now().Add(h.config.AccessExpiry)
 
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"type":    constants.TokenTypeAccess,
-		"exp":     expiryTime.Unix(),
-		"iat":     time.Now().Unix(),
-		"jti":     uuid.New().String(), // JWT ID for tracking
+		"user_id":    userID,
+		"role":       role,
+		"company_id": companyID,
+		"type":       constants.TokenTypeAccess,
+		"exp":        expiryTime.Unix(),
+		"iat":        time.Now().Unix(),
+		"jti":        uuid.New().String(), // JWT ID for tracking
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -94,10 +95,13 @@ func (h *JWTHelper) ValidateAccessToken(tokenString string) (*entity.TokenClaims
 		return nil, fmt.Errorf("missing role in token")
 	}
 
+	companyID, _ := claims["company_id"].(string) // optional for backward compatibility
+
 	return &entity.TokenClaims{
-		UserID: userID,
-		Role:   role,
-		Type:   tokenType,
+		UserID:    userID,
+		Role:      role,
+		Type:      tokenType,
+		CompanyID: companyID,
 	}, nil
 }
 

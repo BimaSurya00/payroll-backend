@@ -1,0 +1,25 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"example.com/hris/internal/attendance/dto"
+	attendanceEntity "example.com/hris/internal/attendance/entity"
+	"example.com/hris/internal/attendance/helper"
+	"example.com/hris/internal/attendance/repository"
+	employeeRepo "example.com/hris/internal/employee/repository"
+	scheduleEntity "example.com/hris/internal/schedule/entity"
+	scheduleRepo "example.com/hris/internal/schedule/repository"
+	sharedHelper "example.com/hris/shared/helper"
+)
+
+type attendanceService struct {
+	attendanceRepo repository.AttendanceRepository
+	sharedHelper "example.com/hris/shared/helper"
+	employeeRepo   employeeRepo.EmployeeRepository
+	scheduleRepo   scheduleRepo.ScheduleRepository
+}

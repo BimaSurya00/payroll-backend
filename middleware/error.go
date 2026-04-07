@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/errs"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
+	"hris/shared/errs"
+	"hris/shared/helper"
 	"go.uber.org/zap"
 )
 

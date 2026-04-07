@@ -1,0 +1,274 @@
+2026-03-09T13:50:21.262+0700	INFO	database/postgres.go:46	connected to PostgreSQL successfully	{"database": "fiber_app"}
+2026-03-09T13:50:21.263+0700	INFO	database/keydb.go:35	connected to KeyDB successfully	{"host": "localhost", "port": "6379"}
+2026-03-09T13:50:21.269+0700	INFO	minio/client.go:73	connected to MinIO	{"endpoint": "localhost:9000"}
+2026-03-09T13:50:21.269+0700	INFO	hris/main.go:159	🚀 Server starting	{"addr": "0.0.0.0:8080"}
+
+ ┌───────────────────────────────────────────────────┐ 
+ │               go-fiber-boilerplate                │ 
+ │                  Fiber v2.52.11                   │ 
+ │               http://127.0.0.1:8080               │ 
+ │       (bound on host 0.0.0.0 and port 8080)       │ 
+ │                                                   │ 
+ │ Handlers ........... 227  Processes ........... 1 │ 
+ │ Prefork ....... Disabled  PID ............ 639998 │ 
+ └───────────────────────────────────────────────────┘ 
+
+2026-03-09T14:12:16.393+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "83a300e6-fa0f-4be5-beeb-ed7f4cac446b", "method": "GET", "path": "/api/v1/leave/types", "status": 401, "duration": "377.713µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:16.394+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "a286d479-640b-4e92-b341-736234daea72", "method": "GET", "path": "/api/v1/leave/balances/my", "status": 401, "duration": "444.319µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:16.431+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "8e81272d-86fc-406d-8bc8-e029f98ee915", "method": "POST", "path": "/api/v1/auth/refresh", "status": 200, "duration": "2.68362ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:16.467+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "8e5da561-7bb5-4793-8f05-dd2742aeed2d", "method": "GET", "path": "/api/v1/leave/types", "status": 200, "duration": "1.990842ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:16.473+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "0cb86ca5-5d77-469f-95eb-c9591ed63678", "method": "GET", "path": "/api/v1/leave/balances/my", "status": 200, "duration": "6.549006ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:16.487+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "b413e88b-fba5-45f1-9ec7-e935728ffb23", "method": "GET", "path": "/api/v1/leave/requests/my", "status": 200, "duration": "2.949478ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:36.324+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "ea802096-89d0-4df9-8074-ef8f2bbc7619", "method": "GET", "path": "/api/v1/attendance/report/my", "status": 200, "duration": "6.85902ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:39.671+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "1cb99227-daf3-45bb-a4b1-504a2b3038e7", "method": "GET", "path": "/api/v1/attendance/all", "status": 403, "duration": "314.476µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:48.245+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "2316de11-0452-4502-ae2d-94f054d94bfa", "method": "GET", "path": "/api/v1/schedules", "status": 403, "duration": "286.528µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:48.249+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "711cb75d-0978-45a0-9a8b-02a6a2e6e57d", "method": "GET", "path": "/api/v1/employees", "status": 403, "duration": "303.704µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:49.730+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "2cb55878-fd42-4772-826f-898fb3037923", "method": "GET", "path": "/api/v1/departments", "status": 403, "duration": "187.447µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:49.748+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "845d7d6c-c788-4126-8121-8e6389ed8b9f", "method": "GET", "path": "/api/v1/employees", "status": 403, "duration": "234.828µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:12:51.783+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "435931dd-8210-4ad2-ad9d-10ca59c507d5", "method": "GET", "path": "/api/v1/leave/types", "status": 200, "duration": "1.643298ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:51.790+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "86409911-3d53-42fe-b9d3-6ad24d3b2a4b", "method": "GET", "path": "/api/v1/leave/balances/my", "status": 200, "duration": "3.145736ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:12:51.812+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "c6682bf3-04f9-43d9-98d2-2a4c3342d639", "method": "GET", "path": "/api/v1/leave/requests/my", "status": 200, "duration": "3.641661ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:14.648+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "8806d80c-ac9d-4e82-a1e5-590a81e4c985", "method": "POST", "path": "/api/v1/auth/logout", "status": 200, "duration": "545.285µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:18.957+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "8e4c2578-9089-494c-adeb-019d1e25b6bc", "method": "POST", "path": "/api/v1/auth/login", "status": 200, "duration": "842.89107ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.101+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "1fc0f361-cdfd-4996-8994-199cc8fb5479", "method": "GET", "path": "/api/v1/dashboard/summary", "status": 200, "duration": "3.167438ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.103+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "a99b0489-dd72-41ac-b443-0e4c516e0bdc", "method": "GET", "path": "/api/v1/dashboard/attendance-stats", "status": 200, "duration": "3.427704ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.109+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "f6c9d8af-7be8-4336-9c15-6bd9dbd2f228", "method": "GET", "path": "/api/v1/dashboard/payroll-stats", "status": 200, "duration": "4.190234ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.111+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "d5831e0e-7db1-43f7-8bc2-53d19ebf66a2", "method": "GET", "path": "/api/v1/dashboard/employee-stats", "status": 200, "duration": "2.557317ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.127+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "ae3bce73-2e20-46b7-9889-7a7468fc0e30", "method": "GET", "path": "/api/v1/dashboard/recent-activities", "status": 200, "duration": "1.671918ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:19.160+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "c1f803de-72fe-4027-adff-775ee5264440", "method": "GET", "path": "/api/v1/companies/current", "status": 200, "duration": "1.307591ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:25.296+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "583ab4d5-7a36-48bf-a164-ef7933ac9625", "method": "GET", "path": "/api/v1/schedules", "status": 403, "duration": "268.01µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:13:25.306+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "c2f019d8-b664-497f-bede-532e9883ed8f", "method": "GET", "path": "/api/v1/employees", "status": 200, "duration": "2.094683ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:25.399+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "1269d4be-5a62-45c5-929b-b7b07bd013e8", "method": "GET", "path": "/api/v1/schedules", "status": 403, "duration": "289.282µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:13:25.406+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "9f40be73-4631-4811-985e-264962ee8eb1", "method": "GET", "path": "/api/v1/schedules", "status": 403, "duration": "298.413µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:13:29.040+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "f4476353-8255-452b-b7c2-f6b984afe80b", "method": "GET", "path": "/api/v1/leave/types/all", "status": 200, "duration": "990.81µs", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:34.917+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "a748d8bd-8a5e-45c5-8b59-775e6c8d242d", "method": "GET", "path": "/api/v1/leave/types", "status": 200, "duration": "1.802003ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:34.919+0700	WARN	middleware/request_logger.go:43	Client error	{"request_id": "701a0e19-4921-42c7-bf7d-ab73ed0435c7", "method": "GET", "path": "/api/v1/leave/balances/my", "status": 404, "duration": "4.075532ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+main.main.RequestLogger.func5
+	/home/bima/Documents/Saas/hris/middleware/request_logger.go:43
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.RequestID.func4
+	/home/bima/Documents/Saas/hris/middleware/request_id.go:24
+github.com/gofiber/fiber/v2.(*Ctx).Next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/ctx.go:1039
+main.main.New.func3
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/middleware/recover/recover.go:43
+github.com/gofiber/fiber/v2.(*App).next
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:143
+github.com/gofiber/fiber/v2.(*App).handler
+	/home/bima/go/pkg/mod/github.com/gofiber/fiber/v2@v2.52.11/router.go:170
+github.com/valyala/fasthttp.(*Server).serveConn
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/server.go:2359
+github.com/valyala/fasthttp.(*workerPool).workerFunc
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:224
+github.com/valyala/fasthttp.(*workerPool).getCh.func1
+	/home/bima/go/pkg/mod/github.com/valyala/fasthttp@v1.51.0/workerpool.go:196
+2026-03-09T14:13:34.961+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "3320a614-6b4d-44a6-9123-961c98c494af", "method": "GET", "path": "/api/v1/leave/requests", "status": 200, "duration": "3.90474ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-09T14:13:35.021+0700	INFO	middleware/request_logger.go:45	Request completed	{"request_id": "8d88c7c6-cf94-409e-9ac2-7dfe8e8c2c53", "method": "GET", "path": "/api/v1/leave/requests/pending", "status": 200, "duration": "1.303286ms", "ip": "192.168.10.163", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"}
+2026-03-10T09:46:12.458+0700	INFO	hris/main.go:169	🛑 Shutdown signal received	{"signal": "terminated"}
+2026-03-10T09:46:12.476+0700	INFO	hris/main.go:173	⏳ Shutting down server...	{"timeout": "30s"}
+2026-03-10T09:46:12.586+0700	INFO	hris/main.go:180	🔌 Closing database connections...
+2026-03-10T09:46:12.589+0700	INFO	database/postgres.go:53	PostgreSQL connection closed
+2026-03-10T09:46:12.590+0700	INFO	database/keydb.go:47	KeyDB connection closed
+2026-03-10T09:46:12.591+0700	INFO	hris/main.go:184	✅ Server exited gracefully
+2026-03-10T09:46:12.591+0700	INFO	database/postgres.go:53	PostgreSQL connection closed

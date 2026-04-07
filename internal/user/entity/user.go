@@ -1,26 +1,36 @@
 package entity
 
 import (
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/entity"
+	"time"
+
+	"github.com/google/uuid"
 )
 
+// User represents a user account stored in PostgreSQL
 type User struct {
-	entity.BaseEntity `bson:",inline"`
-	Name              string `json:"name" bson:"name"`
-	Email             string `json:"email" bson:"email"`
-	Password          string `json:"-" bson:"password"`
-	Role              string `json:"role" bson:"role"`
-	IsActive          bool   `json:"isActive" bson:"isActive"`
-	ProfileImageUrl   string `json:"profileImageUrl" bson:"profileImageUrl"`
+	ID              string    `json:"id" db:"id"`
+	CompanyID       string    `json:"companyId" db:"company_id"`
+	Name            string    `json:"name" db:"name"`
+	Email           string    `json:"email" db:"email"`
+	Password        string    `json:"-" db:"password"`
+	Role            string    `json:"role" db:"role"`
+	IsActive        bool      `json:"isActive" db:"is_active"`
+	ProfileImageUrl string    `json:"profileImageUrl" db:"profile_image_url"`
+	CreatedAt       time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt       time.Time `json:"updatedAt" db:"updated_at"`
 }
 
-func NewUser(name, email, password, role string) *User {
+func NewUser(name, email, password, role, companyID string) *User {
+	now := time.Now()
 	return &User{
-		BaseEntity: entity.NewBaseEntity(),
-		Name:       name,
-		Email:      email,
-		Password:   password,
-		Role:       role,
-		IsActive:   true,
+		ID:        uuid.New().String(),
+		CompanyID: companyID,
+		Name:      name,
+		Email:     email,
+		Password:  password,
+		Role:      role,
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 }

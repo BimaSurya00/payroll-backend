@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-buster AS builder
+FROM golang:1.24-bookworm AS builder
 
 # Set working directory
 WORKDIR /app

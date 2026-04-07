@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
-	"go.mongodb.org/mongo-driver/bson"
+	"hris/internal/user/repository"
 )
 
 var (
@@ -62,12 +61,12 @@ func (s *minioService) UploadUserImage(ctx context.Context, userID string, file 
 	}
 
 	// Update user's profile image URL in database
-	updates := bson.M{
-		"profileImageUrl": fileURL,
-		"updatedAt":       time.Now(),
-	}
+	// Update user's profile image URL in database
+	user.ProfileImageUrl = fileURL
+	// Repo handles updated_at automatically based on SQL implementation, but entity should have it too
+	user.UpdatedAt = time.Now()
 
-	if err := s.userRepo.Update(ctx, user.ID, updates); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		// Attempt to delete uploaded file if database update fails
 		_ = s.minioRepo.Delete(ctx, objectName)
 		return "", fmt.Errorf("failed to update user profile: %w", err)
@@ -111,12 +110,11 @@ func (s *minioService) UpdateUserImage(ctx context.Context, userID string, file 
 	}
 
 	// Update user's profile image URL
-	updates := bson.M{
-		"profileImageUrl": fileURL,
-		"updatedAt":       time.Now(),
-	}
+	// Update user's profile image URL
+	user.ProfileImageUrl = fileURL
+	user.UpdatedAt = time.Now()
 
-	if err := s.userRepo.Update(ctx, user.ID, updates); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		// Attempt to delete newly uploaded file if database update fails
 		_ = s.minioRepo.Delete(ctx, objectName)
 		return "", fmt.Errorf("failed to update user profile: %w", err)
@@ -150,12 +148,11 @@ func (s *minioService) DeleteUserImage(ctx context.Context, userID string) error
 	}
 
 	// Update user's profile image URL to empty string
-	updates := bson.M{
-		"profileImageUrl": "",
-		"updatedAt":       time.Now(),
-	}
+	// Update user's profile image URL to empty string
+	user.ProfileImageUrl = ""
+	user.UpdatedAt = time.Now()
 
-	if err := s.userRepo.Update(ctx, user.ID, updates); err != nil {
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return fmt.Errorf("failed to update user profile: %w", err)
 	}
 

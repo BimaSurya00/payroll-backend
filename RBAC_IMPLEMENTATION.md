@@ -264,8 +264,8 @@ package mymodule
 
 import (
     "github.com/gofiber/fiber/v2"
-    "github.com/itsahyarr/go-fiber-boilerplate/middleware"
-    "github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
+    "hris/middleware"
+    "hris/shared/constants"
 )
 
 func RegisterRoutes(app *fiber.App, deps ...) {

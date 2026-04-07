@@ -1,4 +1,4 @@
-.PHONY: run build test lint clean docker-up docker-down migrate help
+.PHONY: run build test lint clean docker-up docker-down migrate seed help
 
 # Application name
 APP_NAME=go-fiber-boilerplate
@@ -28,6 +28,7 @@ help:
 	@echo "  make docker-up    - Start Docker containers"
 	@echo "  make docker-down  - Stop Docker containers"
 	@echo "  make migrate      - Run database migrations"
+	@echo "  make seed         - Run database seeders"
 	@echo "  make tidy         - Tidy go modules"
 
 ## run: Run the application
@@ -93,6 +94,11 @@ deps:
 migrate:
 	@echo "$(GREEN)Running migrations...$(NC)"
 	@echo "Implement your migration logic here"
+
+## seed: Run database seeders
+seed:
+	@echo "$(GREEN)Running seeders...$(NC)"
+	$(GOCMD) run cmd/seeder/main.go
 
 ## dev: Run with hot reload (requires air)
 dev:

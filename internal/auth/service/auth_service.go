@@ -6,22 +6,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/config"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/dto"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/helper"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/repository"
-	userDto "github.com/itsahyarr/go-fiber-boilerplate/internal/user/dto"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/entity"
-	userRepo "github.com/itsahyarr/go-fiber-boilerplate/internal/user/repository"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
-	sharedHelper "github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
+	"hris/config"
+	"hris/internal/auth/dto"
+	"hris/internal/auth/helper"
+	"hris/internal/auth/repository"
+	userDto "hris/internal/user/dto"
+	"hris/internal/user/entity"
+	userRepo "hris/internal/user/repository"
+	"hris/shared/constants"
+	sharedHelper "hris/shared/helper"
 )
 
 var (
-    ErrEmailAlreadyExists = errors.New("email already exists")
-    ErrInvalidCredentials = errors.New("invalid credentials")
-    ErrAccountDeactivated = errors.New("account is deactivated")
+	ErrEmailAlreadyExists  = errors.New("email already exists")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrAccountDeactivated  = errors.New("account is deactivated")
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrInvalidOldPassword  = errors.New("old password is incorrect")
+	ErrSamePassword        = errors.New("new password must be different from old password")
 )
 
 type AuthService interface {
@@ -30,6 +32,7 @@ type AuthService interface {
 	RefreshToken(ctx context.Context, req *dto.RefreshTokenRequest) (*dto.AuthResponse, error)
 	Logout(ctx context.Context, userID, tokenID string) error
 	LogoutAll(ctx context.Context, userID string) error
+	ChangePassword(ctx context.Context, userID string, req *dto.ChangePasswordRequest) error
 }
 
 type authService struct {
@@ -65,14 +68,14 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Create user
-	user := entity.NewUser(req.Name, req.Email, hashedPassword, constants.RoleUser)
+	// Create user with company_id from request
+	user := entity.NewUser(req.Name, req.Email, hashedPassword, constants.RoleUser, req.CompanyID)
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Generate token pair
-	tokenPair, refreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role)
+	// Generate token pair with company_id
+	tokenPair, refreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role, user.CompanyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
@@ -108,8 +111,8 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 		return nil, ErrAccountDeactivated
 	}
 
-	// Generate token pair
-	tokenPair, refreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role)
+	// Generate token pair with user's company_id
+	tokenPair, refreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role, user.CompanyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
@@ -172,8 +175,8 @@ func (s *authService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 		return nil, fmt.Errorf("failed to revoke old refresh token: %w", err)
 	}
 
-	// 2. Generate new token pair
-	newTokenPair, newRefreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role)
+	// 2. Generate new token pair with user's company_id
+	newTokenPair, newRefreshTokenID, err := s.jwtHelper.GenerateTokenPair(user.ID, user.Role, user.CompanyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new tokens: %w", err)
 	}
@@ -200,4 +203,42 @@ func (s *authService) Logout(ctx context.Context, userID, tokenID string) error 
 func (s *authService) LogoutAll(ctx context.Context, userID string) error {
 	// Delete all refresh tokens for the user (logout from all devices)
 	return s.tokenRepo.DeleteAllUserRefreshTokens(ctx, userID)
+}
+
+func (s *authService) ChangePassword(ctx context.Context, userID string, req *dto.ChangePasswordRequest) error {
+	// 1. Get user
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// 2. Verify old password
+	if !sharedHelper.CheckPassword(user.Password, req.OldPassword) {
+		return ErrInvalidOldPassword
+	}
+
+	// 3. Check new password is different
+	if sharedHelper.CheckPassword(user.Password, req.NewPassword) {
+		return ErrSamePassword
+	}
+
+	// 4. Hash new password
+	hashedPassword, err := sharedHelper.HashPassword(req.NewPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// 5. Update password using entity Update method
+	user.Password = hashedPassword
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// 6. Logout semua device (invalidate semua refresh token) — security best practice
+	if err := s.tokenRepo.DeleteAllUserRefreshTokens(ctx, userID); err != nil {
+		// Log tapi jangan gagalkan — password sudah berubah
+		fmt.Printf("Warning: failed to revoke tokens after password change: %v\n", err)
+	}
+
+	return nil
 }

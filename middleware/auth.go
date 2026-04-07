@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/itsahyarr/go-fiber-boilerplate/config"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/helper"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
-	sharedHelper "github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
+	"hris/config"
+	"hris/internal/auth/helper"
+	"hris/shared/constants"
+	sharedHelper "hris/shared/helper"
 )
 
 func JWTAuth(jwtCfg *config.JWTConfig) fiber.Handler {
@@ -38,6 +38,7 @@ func JWTAuth(jwtCfg *config.JWTConfig) fiber.Handler {
 		// Set user info in context
 		c.Locals(constants.ContextKeyUserID, claims.UserID)
 		c.Locals(constants.ContextKeyUserRole, claims.Role)
+		c.Locals(constants.ContextKeyCompanyID, claims.CompanyID)
 
 		return c.Next()
 	}

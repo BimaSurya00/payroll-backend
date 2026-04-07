@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/config"
+	"hris/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"

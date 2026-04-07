@@ -3,11 +3,13 @@ package dto
 import (
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/entity"
+	"hris/internal/user/entity"
 )
 
 type UserResponse struct {
 	ID              string    `json:"id"`
+	CompanyID       string    `json:"companyId"`
+	CompanyName     string    `json:"companyName"`
 	Name            string    `json:"name"`
 	Email           string    `json:"email"`
 	Role            string    `json:"role"`
@@ -17,9 +19,10 @@ type UserResponse struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-func ToUserResponse(user *entity.User) *UserResponse {
-	return &UserResponse{
+func ToUserResponse(user *entity.User, companyName ...string) *UserResponse {
+	resp := &UserResponse{
 		ID:              user.ID,
+		CompanyID:       user.CompanyID,
 		Name:            user.Name,
 		Email:           user.Email,
 		Role:            user.Role,
@@ -28,6 +31,12 @@ func ToUserResponse(user *entity.User) *UserResponse {
 		CreatedAt:       user.CreatedAt,
 		UpdatedAt:       user.UpdatedAt,
 	}
+
+	if len(companyName) > 0 {
+		resp.CompanyName = companyName[0]
+	}
+
+	return resp
 }
 
 func ToUserResponses(users []*entity.User) []*UserResponse {

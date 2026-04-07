@@ -9,9 +9,10 @@ type TokenPair struct {
 }
 
 type TokenClaims struct {
-	UserID string `json:"userId"`
-	Role   string `json:"role"`
-	Type   string `json:"type"`
+	UserID    string `json:"userId"`
+	Role      string `json:"role"`
+	Type      string `json:"type"`
+	CompanyID string `json:"companyId"`
 }
 
 type RefreshTokenData struct {

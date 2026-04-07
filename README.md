@@ -74,7 +74,7 @@ A production-ready, scalable Golang backend boilerplate using Fiber framework wi
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/itsahyarr/go-fiber-boilerplate.git
+git clone https://hris.git
 cd go-fiber-boilerplate
 ```
 

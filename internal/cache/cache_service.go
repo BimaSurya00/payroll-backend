@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/database"
+	"hris/database"
 )
 
 type CacheService interface {

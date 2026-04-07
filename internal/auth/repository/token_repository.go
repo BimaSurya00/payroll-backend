@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/database"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/entity"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
+	"hris/database"
+	"hris/internal/auth/entity"
+	"hris/shared/constants"
 )
 
 type TokenRepository interface {

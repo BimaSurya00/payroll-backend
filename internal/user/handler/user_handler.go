@@ -5,12 +5,12 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/minio"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/dto"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/user/service"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
-	customValidator "github.com/itsahyarr/go-fiber-boilerplate/shared/validator"
+	"hris/internal/minio"
+	"hris/internal/user/dto"
+	"hris/internal/user/service"
+	"hris/shared/constants"
+	"hris/shared/helper"
+	customValidator "hris/shared/validator"
 )
 
 type UserHandler struct {
@@ -37,7 +37,22 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return helper.ValidationErrorResponse(c, validationErrors)
 	}
 
-	user, err := h.service.CreateUser(c.Context(), &req)
+	// Get company_id from context (set by JWTAuth middleware)
+	companyID, ok := c.Locals(constants.ContextKeyCompanyID).(string)
+	if !ok || companyID == "" {
+		return helper.ErrorResponse(c, fiber.StatusForbidden, "Company context not found", nil)
+	}
+
+	// Get user role from context
+	userRole, _ := c.Locals(constants.ContextKeyUserRole).(string)
+
+	// For SUPER_USER, allow creating user for specific company
+	if userRole == constants.RoleSuperUser && req.CompanyID != nil && *req.CompanyID != "" {
+		// Use company_id from request if super admin specified it
+		companyID = *req.CompanyID
+	}
+
+	user, err := h.service.CreateUser(c.Context(), &req, companyID)
 	if err != nil {
 		if errors.Is(err, service.ErrEmailAlreadyExists) {
 			return helper.ErrorResponse(c, fiber.StatusConflict, err.Error(), nil)
@@ -61,12 +76,34 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 	path := c.Protocol() + "://" + c.Hostname() + c.Path()
 
-	pagination, err := h.service.GetUsers(c.Context(), page, perPage, path)
+	// Get company_id and user_role from context
+	companyID, _ := c.Locals(constants.ContextKeyCompanyID).(string)
+	userRole, _ := c.Locals(constants.ContextKeyUserRole).(string)
+
+	pagination, err := h.service.GetUsers(c.Context(), page, perPage, path, companyID, userRole)
 	if err != nil {
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch users", err.Error())
 	}
 
-	return c.Status(fiber.StatusOK).JSON(pagination)
+	// Extract pagination metadata
+	paginationMeta := helper.PaginationMeta{
+		CurrentPage:  pagination.CurrentPage,
+		PerPage:      pagination.PerPage,
+		Total:        pagination.Total,
+		LastPage:     pagination.LastPage,
+		FirstPageUrl: pagination.FirstPageURL,
+		LastPageUrl:  pagination.LastPageURL,
+	}
+
+	if pagination.NextPageURL != nil {
+		paginationMeta.NextPageUrl = *pagination.NextPageURL
+	}
+
+	if pagination.PrevPageURL != nil {
+		paginationMeta.PrevPageUrl = *pagination.PrevPageURL
+	}
+
+	return helper.SuccessResponseWithPagination(c, fiber.StatusOK, "Users retrieved successfully", pagination.Data, paginationMeta)
 }
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {

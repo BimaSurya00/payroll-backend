@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itsahyarr/go-fiber-boilerplate/config"
+	"hris/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )

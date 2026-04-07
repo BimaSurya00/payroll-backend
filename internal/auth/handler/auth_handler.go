@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/dto"
-	"github.com/itsahyarr/go-fiber-boilerplate/internal/auth/service"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/constants"
-	"github.com/itsahyarr/go-fiber-boilerplate/shared/helper"
-	customValidator "github.com/itsahyarr/go-fiber-boilerplate/shared/validator"
+	"hris/internal/auth/dto"
+	"hris/internal/auth/service"
+	"hris/shared/constants"
+	"hris/shared/helper"
+	customValidator "hris/shared/validator"
 )
 
 var (
@@ -120,4 +120,30 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	}
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "Logged out from all devices successfully", nil)
+}
+
+func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
+	userID := c.Locals(constants.ContextKeyUserID).(string)
+
+	var req dto.ChangePasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body", err.Error())
+	}
+
+	if validationErrors := customValidator.ValidateStruct(&req); len(validationErrors) > 0 {
+		return helper.ValidationErrorResponse(c, validationErrors)
+	}
+
+	err := h.service.ChangePassword(c.Context(), userID, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidOldPassword) {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		if errors.Is(err, service.ErrSamePassword) {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to change password", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Password changed successfully. Please login again.", nil)
 }

@@ -8,20 +8,22 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	MongoDB  MongoDBConfig
-	Postgres PostgresConfig
-	KeyDB    KeyDBConfig
-	JWT      JWTConfig
-	CORS     CORSConfig
-	MinIO    MinIOConfig
+	App        AppConfig
+	MongoDB    MongoDBConfig
+	Postgres   PostgresConfig
+	KeyDB      KeyDBConfig
+	JWT        JWTConfig
+	CORS       CORSConfig
+	MinIO      MinIOConfig
+	Attendance AttendanceConfig
 }
 
 type AppConfig struct {
-	Name string
-	Env  string
-	Port string
-	Host string
+	Name     string
+	Env      string
+	Port     string
+	Host     string
+	Timezone string
 }
 
 type MongoDBConfig struct {
@@ -67,6 +69,12 @@ type MinIOConfig struct {
 	UseSSL    bool
 }
 
+type AttendanceConfig struct {
+	OfficeLat           float64
+	OfficeLong          float64
+	AllowedRadiusMeters int
+}
+
 func LoadConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -89,10 +97,11 @@ func LoadConfig() (*Config, error) {
 
 	config := &Config{
 		App: AppConfig{
-			Name: viper.GetString("APP_NAME"),
-			Env:  viper.GetString("APP_ENV"),
-			Port: viper.GetString("APP_PORT"),
-			Host: viper.GetString("APP_HOST"),
+			Name:     viper.GetString("APP_NAME"),
+			Env:      viper.GetString("APP_ENV"),
+			Port:     viper.GetString("APP_PORT"),
+			Host:     viper.GetString("APP_HOST"),
+			Timezone: viper.GetString("APP_TIMEZONE"),
 		},
 		MongoDB: MongoDBConfig{
 			URI:         viper.GetString("MONGODB_URI"),
@@ -130,6 +139,11 @@ func LoadConfig() (*Config, error) {
 			SecretKey: viper.GetString("MINIO_SECRET_KEY"),
 			Bucket:    viper.GetString("MINIO_BUCKET"),
 			UseSSL:    viper.GetBool("MINIO_USE_SSL"),
+		},
+		Attendance: AttendanceConfig{
+			OfficeLat:           viper.GetFloat64("OFFICE_LAT"),
+			OfficeLong:          viper.GetFloat64("OFFICE_LONG"),
+			AllowedRadiusMeters: viper.GetInt("ALLOWED_RADIUS_METERS"),
 		},
 	}
 
