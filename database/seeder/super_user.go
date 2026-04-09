@@ -29,7 +29,7 @@ func (s *SuperUserSeeder) Seed(ctx context.Context) error {
 	existingUser, err := s.repo.FindByEmail(ctx, getSuperUserEmail())
 	if err != nil && err != repository.ErrUserNotFound {
 		return fmt.Errorf("failed to check existing super user: %w", err)
-	}
+	}   
 
 	if existingUser != nil {
 		fmt.Println("✓ Super user already exists")

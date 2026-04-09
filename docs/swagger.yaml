@@ -1,0 +1,4291 @@
+openapi: 3.0.3
+info:
+  title: HRIS / Payroll SaaS API
+  description: |
+    Multi-tenant HRIS (Human Resource Information System) and Payroll SaaS application.
+
+    ## Authentication
+    JWT Bearer Token. Access token expires in 15 minutes. Use refresh token (7 days) via `/auth/refresh`.
+
+    ## Roles
+    - `SUPER_USER` - Full platform access (bypasses all role checks)
+    - `ADMIN` - Manage employees, approve leave/overtime, view reports
+    - `USER` - Regular employee (clock in/out, own profile, own requests)
+
+    ## Multi-Tenancy
+    All resources are scoped by `company_id` from JWT claims.
+
+    ## Rate Limits
+    - Global: 100 req/min per IP
+    - Auth endpoints: 5 req/min per IP+path
+    - Payroll generate: 3 req/min per IP
+  version: 1.0.0
+  contact:
+    name: HRIS API Support
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+  - url: https://api.example.com/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Authentication & token management
+  - name: Users
+    description: User account management
+  - name: Employees
+    description: Employee management
+  - name: Schedules
+    description: Work schedule management
+  - name: Attendance
+    description: Clock in/out and attendance tracking
+  - name: Payrolls
+    description: Payroll generation and management
+  - name: Leave Types
+    description: Leave type configuration
+  - name: Leave Requests
+    description: Employee leave requests
+  - name: Overtime Policies
+    description: Overtime policy configuration
+  - name: Overtime Requests
+    description: Employee overtime requests
+  - name: Departments
+    description: Department management
+  - name: Holidays
+    description: Company holiday management
+  - name: Companies
+    description: Company management
+  - name: Dashboard
+    description: Dashboard statistics and summaries
+  - name: Audit
+    description: Audit log viewing
+
+paths:
+  # ============================================================
+  # AUTH
+  # ============================================================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      description: Create a new user account. Requires a valid company ID.
+      operationId: authRegister
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: "John Doe"
+              email: "john@example.com"
+              password: "Password123!"
+              companyId: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      description: Authenticate with email and password. Returns JWT tokens.
+      operationId: authLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "john@example.com"
+              password: "Password123!"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          description: Account is inactive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Get a new access token using a valid refresh token.
+      operationId: authRefresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RefreshResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout from current device
+      description: Invalidate the refresh token for the current device.
+      operationId: authLogout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Logout from all devices
+      description: Invalidate ALL refresh tokens for the authenticated user.
+      operationId: authLogoutAll
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  /auth/change-password:
+    put:
+      tags: [Auth]
+      summary: Change password
+      description: Change the authenticated user's password. Requires the current password.
+      operationId: authChangePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "401":
+          description: Old password is incorrect
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  # ============================================================
+  # USERS
+  # ============================================================
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      operationId: usersGetMe
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+
+  /users/:
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Create a new user account. SUPER_USER only.
+      operationId: usersCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Paginated list of all users. SUPER_USER only.
+      operationId: usersList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserResponse'
+
+  /users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      operationId: usersGetById
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Users]
+      summary: Update user
+      description: Update user details. All fields are optional. SUPER_USER only.
+      operationId: usersUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: Hard delete a user. SUPER_USER only.
+      operationId: usersDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /users/{id}/profile-image:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    post:
+      tags: [Users]
+      summary: Upload profile image
+      description: Upload a new profile image. Users can only upload their own image; ADMIN and SUPER_USER can upload for anyone.
+      operationId: usersUploadProfileImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file (JPG, PNG, GIF)
+      responses:
+        "200":
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          imageUrl:
+                            type: string
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "413":
+          description: File too large
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    put:
+      tags: [Users]
+      summary: Replace profile image
+      operationId: usersUpdateProfileImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Image updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          imageUrl:
+                            type: string
+    delete:
+      tags: [Users]
+      summary: Delete profile image
+      operationId: usersDeleteProfileImage
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  # ============================================================
+  # EMPLOYEES
+  # ============================================================
+  /employees/me:
+    get:
+      tags: [Employees]
+      summary: Get own employee profile
+      operationId: employeesGetMe
+      responses:
+        "200":
+          description: Own employee profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeResponse'
+        "404":
+          description: No employee profile linked to this user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    patch:
+      tags: [Employees]
+      summary: Update own profile
+      description: Update limited fields of own employee profile (phone, address, bank info).
+      operationId: employeesUpdateMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMyProfileRequest'
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /employees/:
+    post:
+      tags: [Employees]
+      summary: Create employee
+      description: Create a new employee with a linked user account. ADMIN and SUPER_USER only.
+      operationId: employeesCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeRequest'
+            example:
+              name: "Jane Smith"
+              email: "jane@example.com"
+              password: "Password123!"
+              position: "Software Engineer"
+              salaryBase: 8000000
+              joinDate: "2025-01-15"
+              employmentStatus: "PERMANENT"
+              jobLevel: "STAFF"
+              gender: "FEMALE"
+      responses:
+        "201":
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Employees]
+      summary: List employees
+      description: Paginated list of employees with search. ADMIN and SUPER_USER only.
+      operationId: employeesList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: search
+          in: query
+          description: Search keyword (name, email, position)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmployeeResponse'
+
+  /employees/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Employees]
+      summary: Get employee by ID
+      operationId: employeesGetById
+      responses:
+        "200":
+          description: Employee details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Employees]
+      summary: Update employee
+      description: Update employee details. All fields are optional. ADMIN and SUPER_USER only.
+      operationId: employeesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeRequest'
+      responses:
+        "200":
+          description: Employee updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Employees]
+      summary: Delete employee
+      description: Soft-delete employee. ADMIN and SUPER_USER only.
+      operationId: employeesDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # SCHEDULES
+  # ============================================================
+  /schedules/:
+    post:
+      tags: [Schedules]
+      summary: Create schedule
+      description: Create a new work schedule. SUPER_USER only.
+      operationId: schedulesCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+            example:
+              name: "Office Hours"
+              timeIn: "08:00"
+              timeOut: "17:00"
+              allowedLateMinutes: 15
+              officeLat: -6.2088
+              officeLong: 106.8456
+              allowedRadiusMeters: 50
+              description: "Regular office hours"
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Schedules]
+      summary: List schedules
+      description: Paginated list of schedules. SUPER_USER only.
+      operationId: schedulesList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedScheduleResponse'
+
+  /schedules/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Schedules]
+      summary: Get schedule by ID
+      operationId: schedulesGetById
+      responses:
+        "200":
+          description: Schedule details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Schedules]
+      summary: Update schedule
+      operationId: schedulesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        "200":
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Schedules]
+      summary: Delete schedule
+      description: Soft-delete schedule.
+      operationId: schedulesDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # ATTENDANCE
+  # ============================================================
+  /attendance/clock-in:
+    post:
+      tags: [Attendance]
+      summary: Clock in
+      description: |
+        Clock in for today's attendance. Requires GPS coordinates.
+        **Blocked for ADMIN and SUPER_USER roles (returns 403).**
+      operationId: attendanceClockIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClockInRequest'
+            example:
+              lat: -6.2088
+              long: 106.8456
+      responses:
+        "201":
+          description: Clocked in successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClockInResponse'
+        "400":
+          description: Already clocked in today
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "403":
+          description: ADMIN/SUPER_USER cannot clock in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /attendance/clock-out:
+    post:
+      tags: [Attendance]
+      summary: Clock out
+      description: |
+        Clock out for today's attendance. Requires GPS coordinates.
+        **Blocked for ADMIN and SUPER_USER roles (returns 403).**
+      operationId: attendanceClockOut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClockOutRequest'
+            example:
+              lat: -6.2088
+              long: 106.8456
+      responses:
+        "200":
+          description: Clocked out successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClockOutResponse'
+        "400":
+          description: Not clocked in yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "403":
+          description: ADMIN/SUPER_USER cannot clock out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /attendance/history:
+    get:
+      tags: [Attendance]
+      summary: Own attendance history
+      description: Get the authenticated user's attendance history, paginated.
+      operationId: attendanceHistory
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: Attendance history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAttendanceResponse'
+
+  /attendance/all:
+    get:
+      tags: [Attendance]
+      summary: All attendances
+      description: Get all employees' attendances with filters. ADMIN and SUPER_USER only.
+      operationId: attendanceAll
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: employee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: schedule_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PRESENT, LATE, ABSENT, LEAVE]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2025-01-01"
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2025-01-31"
+      responses:
+        "200":
+          description: Filtered attendance list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAttendanceResponse'
+
+  /attendance/report/monthly:
+    get:
+      tags: [Attendance]
+      summary: Monthly attendance report
+      description: Get monthly attendance report for all employees. ADMIN and SUPER_USER only.
+      operationId: attendanceMonthlyReport
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          example: 1
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 2020
+            maximum: 2100
+          example: 2025
+      responses:
+        "200":
+          description: Monthly report
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MonthlyAttendanceReport'
+
+  /attendance/report/my:
+    get:
+      tags: [Attendance]
+      summary: Own attendance summary
+      description: Get own attendance summary for a specific month.
+      operationId: attendanceMySummary
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2020
+            maximum: 2100
+      responses:
+        "200":
+          description: Own attendance summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MyAttendanceSummary'
+
+  /attendance/correction:
+    post:
+      tags: [Attendance]
+      summary: Create attendance correction
+      description: Create a manual attendance correction for an employee. ADMIN and SUPER_USER only.
+      operationId: attendanceCreateCorrection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCorrectionRequest'
+      responses:
+        "201":
+          description: Correction created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /attendance/{id}/correction:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    patch:
+      tags: [Attendance]
+      summary: Update attendance correction
+      description: Update an existing attendance correction. ADMIN and SUPER_USER only.
+      operationId: attendanceUpdateCorrection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCorrectionRequest'
+      responses:
+        "200":
+          description: Correction updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # PAYROLLS
+  # ============================================================
+  /payrolls/generate:
+    post:
+      tags: [Payrolls]
+      summary: Generate payrolls
+      description: |
+        Generate bulk payroll for all employees for a specific period.
+        ADMIN and SUPER_USER only. **Rate limit: 3 req/min.**
+      operationId: payrollsGenerate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePayrollRequest'
+            example:
+              periodMonth: 1
+              periodYear: 2025
+      responses:
+        "201":
+          description: Payrolls generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GeneratePayrollResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /payrolls/:
+    get:
+      tags: [Payrolls]
+      summary: List all payrolls
+      description: Paginated list of all payrolls. ADMIN and SUPER_USER only.
+      operationId: payrollsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: List of payrolls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPayrollListResponse'
+
+  /payrolls/export/csv:
+    get:
+      tags: [Payrolls]
+      summary: Export payrolls to CSV
+      description: Download payroll data as CSV file. ADMIN and SUPER_USER only.
+      operationId: payrollsExportCsv
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      produces:
+        - text/csv
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /payrolls/my:
+    get:
+      tags: [Payrolls]
+      summary: Own payrolls
+      description: Get authenticated employee's payroll list, paginated.
+      operationId: payrollsMyList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: Own payroll list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPayrollListResponse'
+
+  /payrolls/my/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Payrolls]
+      summary: Own payroll detail
+      description: Get authenticated employee's payroll detail by ID.
+      operationId: payrollsMyDetail
+      responses:
+        "200":
+          description: Payroll detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PayrollResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /payrolls/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Payrolls]
+      summary: Get payroll by ID
+      operationId: payrollsGetById
+      responses:
+        "200":
+          description: Payroll detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PayrollResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /payrolls/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    patch:
+      tags: [Payrolls]
+      summary: Update payroll status
+      description: |
+        Update payroll status. Valid transitions: DRAFT->APPROVED, APPROVED->PAID.
+        ADMIN and SUPER_USER only.
+      operationId: payrollsUpdateStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePayrollStatusRequest'
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # LEAVE TYPES
+  # ============================================================
+  /leave/types:
+    get:
+      tags: [Leave Types]
+      summary: Active leave types
+      description: Get all active leave types for the current company.
+      operationId: leaveTypesList
+      responses:
+        "200":
+          description: List of active leave types
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaveTypeResponse'
+
+  /leave/types/all:
+    get:
+      tags: [Leave Types]
+      summary: All leave types
+      description: Get all leave types including inactive ones. ADMIN and SUPER_USER only.
+      operationId: leaveTypesListAll
+      responses:
+        "200":
+          description: All leave types
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaveTypeResponse'
+
+  /leave/types/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Leave Types]
+      summary: Get leave type by ID
+      operationId: leaveTypesGetById
+      responses:
+        "200":
+          description: Leave type detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveTypeResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Leave Types]
+      summary: Update leave type
+      operationId: leaveTypesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeaveTypeRequest'
+      responses:
+        "200":
+          description: Leave type updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveTypeResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Leave Types]
+      summary: Delete leave type
+      operationId: leaveTypesDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # LEAVE REQUESTS
+  # ============================================================
+  /leave/requests:
+    post:
+      tags: [Leave Requests]
+      summary: Create leave request
+      description: Submit a new leave request. Validates balance and date overlaps.
+      operationId: leaveRequestsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeaveRequestRequest'
+            example:
+              leaveTypeId: "550e8400-e29b-41d4-a716-446655440000"
+              startDate: "2025-02-10"
+              endDate: "2025-02-12"
+              reason: "Family event that requires my attendance for three days"
+              emergencyContact: "081234567890"
+      responses:
+        "201":
+          description: Leave request created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveRequestResponse'
+        "400":
+          description: Insufficient balance or date overlap
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Leave Requests]
+      summary: All leave requests
+      description: Paginated list of all leave requests. ADMIN and SUPER_USER only.
+      operationId: leaveRequestsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: List of leave requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeaveRequestResponse'
+
+  /leave/requests/my:
+    get:
+      tags: [Leave Requests]
+      summary: Own leave requests
+      description: Get authenticated employee's leave requests, paginated.
+      operationId: leaveRequestsMy
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: Own leave requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeaveRequestResponse'
+
+  /leave/requests/pending:
+    get:
+      tags: [Leave Requests]
+      summary: Pending leave requests
+      description: Get all pending leave requests. ADMIN and SUPER_USER only.
+      operationId: leaveRequestsPending
+      responses:
+        "200":
+          description: Pending leave requests
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaveRequestResponse'
+
+  /leave/requests/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Leave Requests]
+      summary: Get leave request by ID
+      operationId: leaveRequestsGetById
+      responses:
+        "200":
+          description: Leave request detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveRequestResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /leave/requests/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    put:
+      tags: [Leave Requests]
+      summary: Approve leave request
+      description: Approve a pending leave request. ADMIN and SUPER_USER only.
+      operationId: leaveRequestsApprove
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveLeaveRequest'
+      responses:
+        "200":
+          description: Leave request approved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveRequestResponse'
+        "400":
+          description: Request is not in PENDING status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /leave/requests/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    put:
+      tags: [Leave Requests]
+      summary: Reject leave request
+      description: Reject a pending leave request. ADMIN and SUPER_USER only.
+      operationId: leaveRequestsReject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectLeaveRequest'
+      responses:
+        "200":
+          description: Leave request rejected
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveRequestResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /leave/balances/my:
+    get:
+      tags: [Leave Requests]
+      summary: Own leave balances
+      description: Get authenticated employee's leave balances for a specific year.
+      operationId: leaveBalancesMy
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leave balances
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LeaveBalanceResponse'
+
+  # ============================================================
+  # OVERTIME POLICIES
+  # ============================================================
+  /overtime/policies:
+    get:
+      tags: [Overtime Policies]
+      summary: Active overtime policies
+      description: Get all active overtime policies for the current company.
+      operationId: overtimePoliciesList
+      responses:
+        "200":
+          description: List of active overtime policies
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OvertimePolicyResponse'
+
+  # ============================================================
+  # OVERTIME REQUESTS
+  # ============================================================
+  /overtime/requests:
+    post:
+      tags: [Overtime Requests]
+      summary: Create overtime request
+      description: Submit a new overtime request. Validates policy limits and duplicate dates.
+      operationId: overtimeRequestsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOvertimeRequestRequest'
+            example:
+              overtimeDate: "2025-02-15"
+              startTime: "18:00"
+              endTime: "21:00"
+              reason: "Urgent project deadline needs to be met tonight"
+              overtimePolicyId: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "201":
+          description: Overtime request created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeRequestResponse'
+        "400":
+          description: Duplicate date or policy limit exceeded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Overtime Requests]
+      summary: All overtime requests
+      description: Paginated list with filters. ADMIN and SUPER_USER only.
+      operationId: overtimeRequestsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - name: employee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of overtime requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOvertimeRequestResponse'
+
+  /overtime/requests/my:
+    get:
+      tags: [Overtime Requests]
+      summary: Own overtime requests
+      operationId: overtimeRequestsMy
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: Own overtime requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOvertimeRequestResponse'
+
+  /overtime/requests/pending:
+    get:
+      tags: [Overtime Requests]
+      summary: Pending overtime requests
+      description: All pending overtime requests. ADMIN and SUPER_USER only.
+      operationId: overtimeRequestsPending
+      responses:
+        "200":
+          description: Pending overtime requests
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OvertimeRequestResponse'
+
+  /overtime/requests/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Overtime Requests]
+      summary: Get overtime request by ID
+      operationId: overtimeRequestsGetById
+      responses:
+        "200":
+          description: Overtime request detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeRequestResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /overtime/requests/{id}/clock-in:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    post:
+      tags: [Overtime Requests]
+      summary: Clock in for overtime
+      description: Clock in for an approved overtime request.
+      operationId: overtimeRequestsClockIn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OvertimeClockInRequest'
+      responses:
+        "201":
+          description: Clocked in
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeAttendanceResponse'
+        "400":
+          description: Not approved or already clocked in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /overtime/requests/{id}/clock-out:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    post:
+      tags: [Overtime Requests]
+      summary: Clock out from overtime
+      operationId: overtimeRequestsClockOut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OvertimeClockOutRequest'
+      responses:
+        "200":
+          description: Clocked out
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeAttendanceResponse'
+        "400":
+          description: Not clocked in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /overtime/requests/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    put:
+      tags: [Overtime Requests]
+      summary: Approve overtime request
+      description: ADMIN and SUPER_USER only.
+      operationId: overtimeRequestsApprove
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveOvertimeRequest'
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeRequestResponse'
+
+  /overtime/requests/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    put:
+      tags: [Overtime Requests]
+      summary: Reject overtime request
+      description: ADMIN and SUPER_USER only.
+      operationId: overtimeRequestsReject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectOvertimeRequest'
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeRequestResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+  /overtime/calculation/{employeeId}:
+    get:
+      tags: [Overtime Requests]
+      summary: Calculate overtime pay
+      description: |
+        Calculate overtime pay for an employee within a date range.
+        Formula: `hourly_rate = salaryBase / 173`, `overtime_pay = totalHours * hourlyRate * rateMultiplier`
+        ADMIN and SUPER_USER only.
+      operationId: overtimeCalculation
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Overtime calculation result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OvertimeCalculationResponse'
+
+  # ============================================================
+  # DEPARTMENTS
+  # ============================================================
+  /departments/:
+    post:
+      tags: [Departments]
+      summary: Create department
+      description: ADMIN and SUPER_USER only.
+      operationId: departmentsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDepartmentRequest'
+      responses:
+        "201":
+          description: Department created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DepartmentResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Departments]
+      summary: List departments
+      description: Paginated list. ADMIN and SUPER_USER only.
+      operationId: departmentsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDepartmentResponse'
+
+  /departments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Departments]
+      summary: Get department by ID
+      operationId: departmentsGetById
+      responses:
+        "200":
+          description: Department detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DepartmentResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Departments]
+      summary: Update department
+      operationId: departmentsUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepartmentRequest'
+      responses:
+        "200":
+          description: Department updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DepartmentResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Departments]
+      summary: Delete department
+      description: Soft-delete department.
+      operationId: departmentsDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  # ============================================================
+  # HOLIDAYS
+  # ============================================================
+  /holidays/:
+    post:
+      tags: [Holidays]
+      summary: Create holiday
+      description: ADMIN and SUPER_USER only.
+      operationId: holidaysCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHolidayRequest'
+      responses:
+        "201":
+          description: Holiday created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HolidayResponse'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Holidays]
+      summary: List holidays
+      description: List holidays by year. ADMIN and SUPER_USER only.
+      operationId: holidaysList
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of holidays
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HolidayResponse'
+
+  /holidays/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Holidays]
+      summary: Get holiday by ID
+      operationId: holidaysGetById
+      responses:
+        "200":
+          description: Holiday detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HolidayResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Holidays]
+      summary: Update holiday
+      operationId: holidaysUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHolidayRequest'
+      responses:
+        "200":
+          description: Holiday updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HolidayResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Holidays]
+      summary: Delete holiday
+      operationId: holidaysDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  # ============================================================
+  # COMPANIES
+  # ============================================================
+  /companies/current:
+    get:
+      tags: [Companies]
+      summary: Get current company
+      description: Get the authenticated user's company.
+      operationId: companiesGetCurrent
+      responses:
+        "200":
+          description: Current company
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CompanyResponse'
+
+  /companies/:
+    post:
+      tags: [Companies]
+      summary: Create company
+      description: SUPER_USER only.
+      operationId: companiesCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompanyRequest'
+      responses:
+        "201":
+          description: Company created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CompanyResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Companies]
+      summary: List all companies
+      description: SUPER_USER only.
+      operationId: companiesList
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CompanyResponse'
+
+  /companies/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UUID'
+    get:
+      tags: [Companies]
+      summary: Get company by ID
+      operationId: companiesGetById
+      responses:
+        "200":
+          description: Company detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CompanyResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Companies]
+      summary: Update company
+      description: SUPER_USER only.
+      operationId: companiesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCompanyRequest'
+      responses:
+        "200":
+          description: Company updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CompanyResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Companies]
+      summary: Delete company
+      description: SUPER_USER only.
+      operationId: companiesDelete
+      responses:
+        "200":
+          $ref: '#/components/responses/SuccessNoData'
+
+  # ============================================================
+  # DASHBOARD
+  # ============================================================
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Dashboard summary
+      description: Aggregated summary of attendance, leave, payroll, and employee counts. ADMIN and SUPER_USER only.
+      operationId: dashboardSummary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardSummary'
+
+  /dashboard/attendance-stats:
+    get:
+      tags: [Dashboard]
+      summary: Attendance statistics
+      description: Daily breakdown and period summary. ADMIN and SUPER_USER only.
+      operationId: dashboardAttendanceStats
+      responses:
+        "200":
+          description: Attendance stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttendanceStats'
+
+  /dashboard/payroll-stats:
+    get:
+      tags: [Dashboard]
+      summary: Payroll statistics
+      description: Payroll totals, status breakdown, department stats. ADMIN and SUPER_USER only.
+      operationId: dashboardPayrollStats
+      responses:
+        "200":
+          description: Payroll stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PayrollStats'
+
+  /dashboard/employee-stats:
+    get:
+      tags: [Dashboard]
+      summary: Employee statistics
+      description: Employee counts by status, department, job level. ADMIN and SUPER_USER only.
+      operationId: dashboardEmployeeStats
+      responses:
+        "200":
+          description: Employee stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EmployeeStats'
+
+  /dashboard/recent-activities:
+    get:
+      tags: [Dashboard]
+      summary: Recent activities
+      description: Latest audit log entries. ADMIN and SUPER_USER only.
+      operationId: dashboardRecentActivities
+      responses:
+        "200":
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RecentActivitiesResponse'
+
+  # ============================================================
+  # AUDIT
+  # ============================================================
+  /audit/logs:
+    get:
+      tags: [Audit]
+      summary: All audit logs
+      description: Paginated list of all audit logs. SUPER_USER only.
+      operationId: auditLogsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogPagination'
+
+  /audit/logs/{resourceType}/{resourceId}:
+    get:
+      tags: [Audit]
+      summary: Audit logs for resource
+      description: Get audit logs for a specific resource. SUPER_USER only.
+      operationId: auditLogsByResource
+      parameters:
+        - name: resourceType
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "employee"
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: Audit logs for resource
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AuditLogResponse'
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token (15 min expiry). Use /auth/refresh to get a new one."
+
+  parameters:
+    UUID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    PerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+
+  responses:
+    SuccessNoData:
+      description: Success response with no data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuccessResponse'
+          example:
+            success: true
+            statusCode: 200
+            message: "Success"
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Unauthorized - invalid or expired token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Forbidden - insufficient role
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Conflict - resource already exists
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+
+  schemas:
+    # --- Common Responses ---
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+        data: {}
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        statusCode:
+          type: integer
+          example: 422
+        message:
+          type: string
+          example: "Validation failed"
+        error:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorItem'
+
+    ValidationErrorItem:
+      type: object
+      properties:
+        field:
+          type: string
+          example: "email"
+        message:
+          type: string
+          example: "Invalid email format"
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        perPage:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          format: int64
+          example: 100
+        lastPage:
+          type: integer
+          example: 10
+        firstPageUrl:
+          type: string
+          nullable: true
+        lastPageUrl:
+          type: string
+          nullable: true
+        nextPageUrl:
+          type: string
+          nullable: true
+        prevPageUrl:
+          type: string
+          nullable: true
+
+    # --- Auth Schemas ---
+    RegisterRequest:
+      type: object
+      required: [name, email, password, companyId]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: "Must contain uppercase, lowercase, number, and special character"
+          example: "Password123!"
+        companyId:
+          type: string
+          format: uuid
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken, userId]
+      properties:
+        refreshToken:
+          type: string
+        userId:
+          type: string
+          format: uuid
+
+    ChangePasswordRequest:
+      type: object
+      required: [oldPassword, newPassword]
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          description: "Must contain uppercase, lowercase, number, and special character"
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: integer
+          format: int64
+        tokenType:
+          type: string
+          example: "Bearer"
+
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: integer
+          format: int64
+
+    # --- User Schemas ---
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        companyName:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [SUPER_USER, ADMIN, USER]
+        isActive:
+          type: boolean
+        profileImageUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateUserRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          enum: [SUPER_USER, ADMIN, USER]
+        companyId:
+          type: string
+          format: uuid
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          enum: [SUPER_USER, ADMIN, USER]
+        isActive:
+          type: boolean
+        companyId:
+          type: string
+          format: uuid
+
+    # --- Employee Schemas ---
+    EmployeeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+        userEmail:
+          type: string
+        position:
+          type: string
+        phoneNumber:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        salaryBase:
+          type: number
+          format: double
+        joinDate:
+          type: string
+          format: date
+        bankName:
+          type: string
+          nullable: true
+        bankAccountNumber:
+          type: string
+          nullable: true
+        bankAccountHolder:
+          type: string
+          nullable: true
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        schedule:
+          $ref: '#/components/schemas/ScheduleDetail'
+        employmentStatus:
+          type: string
+          enum: [PERMANENT, CONTRACT, PROBATION]
+        jobLevel:
+          type: string
+          enum: [CEO, MANAGER, SUPERVISOR, STAFF]
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+          nullable: true
+        division:
+          type: string
+          nullable: true
+        departmentId:
+          type: string
+          format: uuid
+          nullable: true
+        departmentName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ScheduleDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        timeIn:
+          type: string
+          example: "08:00"
+        timeOut:
+          type: string
+          example: "17:00"
+        allowedLateMinutes:
+          type: integer
+
+    CreateEmployeeRequest:
+      type: object
+      required: [name, email, password, position, salaryBase, joinDate, employmentStatus, jobLevel, gender]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        position:
+          type: string
+          minLength: 3
+          maxLength: 100
+        phoneNumber:
+          type: string
+          maxLength: 20
+        address:
+          type: string
+          maxLength: 500
+        salaryBase:
+          type: number
+          exclusiveMinimum: 0
+        joinDate:
+          type: string
+          format: date
+        bankName:
+          type: string
+          maxLength: 100
+        bankAccountNumber:
+          type: string
+          maxLength: 50
+        bankAccountHolder:
+          type: string
+          maxLength: 100
+        scheduleId:
+          type: string
+          format: uuid
+        employmentStatus:
+          type: string
+          enum: [PERMANENT, CONTRACT, PROBATION]
+        jobLevel:
+          type: string
+          enum: [CEO, MANAGER, SUPERVISOR, STAFF]
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        division:
+          type: string
+          maxLength: 100
+        departmentId:
+          type: string
+          format: uuid
+
+    UpdateEmployeeRequest:
+      type: object
+      properties:
+        position:
+          type: string
+          minLength: 3
+          maxLength: 100
+        phoneNumber:
+          type: string
+          maxLength: 20
+        address:
+          type: string
+          maxLength: 500
+        salaryBase:
+          type: number
+          exclusiveMinimum: 0
+        bankName:
+          type: string
+          maxLength: 100
+        bankAccountNumber:
+          type: string
+          maxLength: 50
+        bankAccountHolder:
+          type: string
+          maxLength: 100
+        scheduleId:
+          type: string
+          format: uuid
+        employmentStatus:
+          type: string
+          enum: [PERMANENT, CONTRACT, PROBATION]
+        jobLevel:
+          type: string
+          enum: [CEO, MANAGER, SUPERVISOR, STAFF]
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        division:
+          type: string
+          maxLength: 100
+        departmentId:
+          type: string
+          format: uuid
+
+    UpdateMyProfileRequest:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          minLength: 10
+          maxLength: 15
+        address:
+          type: string
+          minLength: 5
+        bankName:
+          type: string
+        bankAccountNumber:
+          type: string
+        bankAccountHolder:
+          type: string
+
+    # --- Schedule Schemas ---
+    ScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        timeIn:
+          type: string
+        timeOut:
+          type: string
+        allowedLateMinutes:
+          type: integer
+        officeLat:
+          type: number
+        officeLong:
+          type: number
+        allowedRadiusMeters:
+          type: integer
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateScheduleRequest:
+      type: object
+      required: [name, timeIn, timeOut, officeLat, officeLong]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        timeIn:
+          type: string
+          description: "HH:MM format"
+        timeOut:
+          type: string
+          description: "HH:MM format"
+        allowedLateMinutes:
+          type: integer
+          minimum: 0
+          maximum: 60
+          default: 15
+        officeLat:
+          type: number
+          minimum: -90
+          maximum: 90
+        officeLong:
+          type: number
+          minimum: -180
+          maximum: 180
+        allowedRadiusMeters:
+          type: integer
+          minimum: 10
+          maximum: 1000
+          default: 50
+        description:
+          type: string
+          maxLength: 500
+
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        timeIn:
+          type: string
+        timeOut:
+          type: string
+        allowedLateMinutes:
+          type: integer
+          minimum: 0
+          maximum: 60
+        officeLat:
+          type: number
+          minimum: -90
+          maximum: 90
+        officeLong:
+          type: number
+          minimum: -180
+          maximum: 180
+        allowedRadiusMeters:
+          type: integer
+          minimum: 10
+          maximum: 1000
+        description:
+          type: string
+          maxLength: 500
+
+    # --- Attendance Schemas ---
+    AttendanceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        clockInTime:
+          type: string
+          format: date-time
+          nullable: true
+        clockOutTime:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [PRESENT, LATE, ABSENT, LEAVE]
+        notes:
+          type: string
+          nullable: true
+        scheduleName:
+          type: string
+          nullable: true
+
+    ClockInRequest:
+      type: object
+      required: [lat, long]
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        long:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    ClockInResponse:
+      type: object
+      properties:
+        attendanceId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        clockInTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PRESENT, LATE]
+        distance:
+          type: number
+          description: "Distance from office in meters"
+        scheduleName:
+          type: string
+
+    ClockOutRequest:
+      type: object
+      required: [lat, long]
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        long:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    ClockOutResponse:
+      type: object
+      properties:
+        attendanceId:
+          type: string
+          format: uuid
+        clockOutTime:
+          type: string
+          format: date-time
+        distance:
+          type: number
+          description: "Distance from office in meters"
+
+    CreateCorrectionRequest:
+      type: object
+      required: [employeeId, date, clockIn, status, notes]
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        clockIn:
+          type: string
+          description: "HH:MM format"
+        clockOut:
+          type: string
+          description: "HH:MM format"
+        status:
+          type: string
+          enum: [PRESENT, LATE, ABSENT]
+        notes:
+          type: string
+          minLength: 5
+
+    UpdateCorrectionRequest:
+      type: object
+      properties:
+        clockIn:
+          type: string
+          description: "HH:MM format"
+        clockOut:
+          type: string
+          description: "HH:MM format"
+        status:
+          type: string
+          enum: [PRESENT, LATE, ABSENT]
+        notes:
+          type: string
+          minLength: 5
+
+    MyAttendanceSummary:
+      type: object
+      properties:
+        period:
+          type: string
+        totalPresent:
+          type: integer
+        totalLate:
+          type: integer
+        totalAbsent:
+          type: integer
+        totalLeave:
+          type: integer
+        totalDays:
+          type: integer
+        attendanceRate:
+          type: number
+          description: "Percentage"
+
+    MonthlyAttendanceReport:
+      type: object
+      properties:
+        period:
+          type: string
+        month:
+          type: integer
+        year:
+          type: integer
+        totalEmployees:
+          type: integer
+        summary:
+          $ref: '#/components/schemas/AttendanceReportItem'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceReportItem'
+
+    AttendanceReportItem:
+      type: object
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        position:
+          type: string
+        division:
+          type: string
+        totalPresent:
+          type: integer
+        totalLate:
+          type: integer
+        totalAbsent:
+          type: integer
+        totalLeave:
+          type: integer
+        totalDays:
+          type: integer
+        attendanceRate:
+          type: number
+        period:
+          type: string
+
+    # --- Payroll Schemas ---
+    PayrollResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        bankName:
+          type: string
+          nullable: true
+        bankAccountNumber:
+          type: string
+          nullable: true
+        bankAccountHolder:
+          type: string
+          nullable: true
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        baseSalary:
+          type: number
+        totalAllowance:
+          type: number
+        totalDeduction:
+          type: number
+        netSalary:
+          type: number
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, PAID, CANCELLED]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayrollItemResponse'
+        generatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PayrollItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [EARNING, DEDUCTION]
+
+    PayrollListResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        period:
+          type: string
+        netSalary:
+          type: number
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, PAID, CANCELLED]
+        generatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    GeneratePayrollRequest:
+      type: object
+      required: [periodMonth, periodYear]
+      properties:
+        periodMonth:
+          type: integer
+          minimum: 1
+          maximum: 12
+        periodYear:
+          type: integer
+          minimum: 2020
+          maximum: 2100
+
+    GeneratePayrollResponse:
+      type: object
+      properties:
+        totalGenerated:
+          type: integer
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        message:
+          type: string
+
+    UpdatePayrollStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, PAID, CANCELLED]
+        notes:
+          type: string
+          maxLength: 500
+
+    # --- Leave Schemas ---
+    LeaveTypeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        maxDaysPerYear:
+          type: integer
+        defaultDays:
+          type: integer
+        isPaid:
+          type: boolean
+        requiresApproval:
+          type: boolean
+        isActive:
+          type: boolean
+        color:
+          type: string
+          description: "Hex color code"
+          example: "#3b82f6"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLeaveTypeRequest:
+      type: object
+      required: [name, code, isPaid, requiresApproval, isActive]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        code:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: "Uppercase code"
+        description:
+          type: string
+          maxLength: 500
+        maxDaysPerYear:
+          type: integer
+          minimum: 0
+          maximum: 365
+          default: 12
+        defaultDays:
+          type: integer
+          minimum: 0
+          maximum: 365
+        isPaid:
+          type: boolean
+          default: true
+        requiresApproval:
+          type: boolean
+          default: true
+        isActive:
+          type: boolean
+          default: true
+        color:
+          type: string
+          maxLength: 7
+
+    UpdateLeaveTypeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        maxDaysPerYear:
+          type: integer
+          minimum: 1
+          maximum: 365
+        isPaid:
+          type: boolean
+        requiresApproval:
+          type: boolean
+        isActive:
+          type: boolean
+
+    LeaveRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        employeePosition:
+          type: string
+        leaveType:
+          $ref: '#/components/schemas/LeaveTypeDetail'
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        totalDays:
+          type: integer
+        reason:
+          type: string
+        attachmentUrl:
+          type: string
+          nullable: true
+        emergencyContact:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, CANCELLED]
+        approvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        approvedByName:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LeaveTypeDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        isPaid:
+          type: boolean
+
+    CreateLeaveRequestRequest:
+      type: object
+      required: [leaveTypeId, startDate, endDate, reason]
+      properties:
+        leaveTypeId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        attachmentUrl:
+          type: string
+          format: uri
+        emergencyContact:
+          type: string
+          maxLength: 20
+
+    ApproveLeaveRequest:
+      type: object
+      properties:
+        approvalNote:
+          type: string
+          maxLength: 500
+
+    RejectLeaveRequest:
+      type: object
+      required: [rejectionReason]
+      properties:
+        rejectionReason:
+          type: string
+          minLength: 10
+          maxLength: 500
+
+    LeaveBalanceResponse:
+      type: object
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        year:
+          type: integer
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaveBalanceItem'
+
+    LeaveBalanceItem:
+      type: object
+      properties:
+        leaveTypeId:
+          type: string
+          format: uuid
+        leaveTypeName:
+          type: string
+        balance:
+          type: integer
+        used:
+          type: integer
+        pending:
+          type: integer
+        available:
+          type: integer
+
+    # --- Overtime Schemas ---
+    OvertimePolicyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        rateType:
+          type: string
+          enum: [FIXED, MULTIPLIER]
+        rateMultiplier:
+          type: number
+        fixedAmount:
+          type: number
+        minOvertimeMinutes:
+          type: integer
+        maxOvertimeHoursPerDay:
+          type: number
+        maxOvertimeHoursPerMonth:
+          type: number
+        requiresApproval:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateOvertimeRequestRequest:
+      type: object
+      required: [overtimeDate, startTime, endTime, reason, overtimePolicyId]
+      properties:
+        overtimeDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          description: "HH:MM format"
+        endTime:
+          type: string
+          description: "HH:MM format"
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        overtimePolicyId:
+          type: string
+          format: uuid
+
+    OvertimeRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        employeePosition:
+          type: string
+        overtimeDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+        endTime:
+          type: string
+        totalHours:
+          type: number
+        reason:
+          type: string
+        overtimePolicy:
+          $ref: '#/components/schemas/OvertimePolicyDetail'
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        approvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        approvedByName:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OvertimePolicyDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        rateType:
+          type: string
+          enum: [FIXED, MULTIPLIER]
+        rateMultiplier:
+          type: number
+        fixedAmount:
+          type: number
+
+    ApproveOvertimeRequest:
+      type: object
+      properties:
+        approvalNote:
+          type: string
+          maxLength: 500
+
+    RejectOvertimeRequest:
+      type: object
+      required: [rejectionReason]
+      properties:
+        rejectionReason:
+          type: string
+          minLength: 10
+          maxLength: 500
+
+    OvertimeClockInRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          maxLength: 500
+
+    OvertimeClockOutRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          maxLength: 500
+
+    OvertimeAttendanceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        overtimeRequestId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        clockInTime:
+          type: string
+          format: date-time
+          nullable: true
+        clockOutTime:
+          type: string
+          format: date-time
+          nullable: true
+        actualHours:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    OvertimeCalculationResponse:
+      type: object
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        totalHours:
+          type: number
+        rateType:
+          type: string
+        rateMultiplier:
+          type: number
+        hourlyRate:
+          type: number
+          description: "salaryBase / 173"
+        overtimePay:
+          type: number
+          description: "totalHours * hourlyRate * rateMultiplier"
+
+    # --- Department Schemas ---
+    DepartmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        headEmployeeId:
+          type: string
+          format: uuid
+          nullable: true
+        headEmployeeName:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        employeeCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateDepartmentRequest:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        code:
+          type: string
+          minLength: 2
+          maxLength: 20
+          description: "Uppercase code"
+        description:
+          type: string
+          maxLength: 500
+        headEmployeeId:
+          type: string
+          format: uuid
+        isActive:
+          type: boolean
+
+    UpdateDepartmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        code:
+          type: string
+          minLength: 2
+          maxLength: 20
+        description:
+          type: string
+          maxLength: 500
+        headEmployeeId:
+          type: string
+          format: uuid
+        isActive:
+          type: boolean
+
+    # --- Holiday Schemas ---
+    HolidayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        date:
+          type: string
+          format: date
+        type:
+          type: string
+          enum: [NATIONAL, COMPANY, OPTIONAL]
+        isRecurring:
+          type: boolean
+        year:
+          type: integer
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateHolidayRequest:
+      type: object
+      required: [name, date, type]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        date:
+          type: string
+          format: date
+        type:
+          type: string
+          enum: [NATIONAL, COMPANY, OPTIONAL]
+        isRecurring:
+          type: boolean
+          default: false
+        year:
+          type: integer
+          minimum: 2000
+        description:
+          type: string
+          maxLength: 500
+
+    UpdateHolidayRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        date:
+          type: string
+          format: date
+        type:
+          type: string
+          enum: [NATIONAL, COMPANY, OPTIONAL]
+        isRecurring:
+          type: boolean
+        year:
+          type: integer
+          minimum: 2000
+        description:
+          type: string
+          maxLength: 500
+
+    # --- Company Schemas ---
+    CompanyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        isActive:
+          type: boolean
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        maxEmployees:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCompanyRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: "lowercase, numbers, hyphens only"
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        maxEmployees:
+          type: integer
+          minimum: 1
+
+    UpdateCompanyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 100
+        isActive:
+          type: boolean
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        maxEmployees:
+          type: integer
+          minimum: 1
+
+    # --- Dashboard Schemas ---
+    DashboardSummary:
+      type: object
+      properties:
+        attendance:
+          $ref: '#/components/schemas/DashboardAttendanceSummary'
+        leave:
+          $ref: '#/components/schemas/DashboardLeaveSummary'
+        payroll:
+          $ref: '#/components/schemas/DashboardPayrollSummary'
+        employee:
+          $ref: '#/components/schemas/DashboardEmployeeSummary'
+
+    DashboardAttendanceSummary:
+      type: object
+      properties:
+        todayPresent:
+          type: integer
+        todayLate:
+          type: integer
+        todayAbsent:
+          type: integer
+        todayLeave:
+          type: integer
+        totalEmployees:
+          type: integer
+
+    DashboardLeaveSummary:
+      type: object
+      properties:
+        pendingRequests:
+          type: integer
+        approvedThisMonth:
+          type: integer
+        rejectedThisMonth:
+          type: integer
+
+    DashboardPayrollSummary:
+      type: object
+      properties:
+        draftCount:
+          type: integer
+        approvedCount:
+          type: integer
+        paidCount:
+          type: integer
+        totalNetSalary:
+          type: number
+        currentPeriod:
+          type: string
+
+    DashboardEmployeeSummary:
+      type: object
+      properties:
+        totalActive:
+          type: integer
+        totalInactive:
+          type: integer
+        newThisMonth:
+          type: integer
+
+    AttendanceStats:
+      type: object
+      properties:
+        period:
+          type: string
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyAttendanceStat'
+        summary:
+          $ref: '#/components/schemas/AttendancePeriodSummary'
+
+    DailyAttendanceStat:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        present:
+          type: integer
+        late:
+          type: integer
+        absent:
+          type: integer
+        leave:
+          type: integer
+        total:
+          type: integer
+
+    AttendancePeriodSummary:
+      type: object
+      properties:
+        totalPresent:
+          type: integer
+        totalLate:
+          type: integer
+        totalAbsent:
+          type: integer
+        totalLeave:
+          type: integer
+        avgPresent:
+          type: number
+        avgLate:
+          type: number
+
+    PayrollStats:
+      type: object
+      properties:
+        period:
+          type: string
+        totalPayrolls:
+          type: integer
+        totalAmount:
+          type: number
+        averageSalary:
+          type: number
+        statusBreakdown:
+          $ref: '#/components/schemas/PayrollStatusBreakdown'
+        departmentStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentPayrollStat'
+
+    PayrollStatusBreakdown:
+      type: object
+      properties:
+        draftCount:
+          type: integer
+        approvedCount:
+          type: integer
+        paidCount:
+          type: integer
+        draftAmount:
+          type: number
+        approvedAmount:
+          type: number
+        paidAmount:
+          type: number
+
+    DepartmentPayrollStat:
+      type: object
+      properties:
+        departmentId:
+          type: string
+          format: uuid
+        departmentName:
+          type: string
+        employeeCount:
+          type: integer
+        totalPayroll:
+          type: number
+
+    EmployeeStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        statusBreakdown:
+          $ref: '#/components/schemas/EmployeeStatusBreakdown'
+        departmentStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentEmployeeStat'
+        jobLevelStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobLevelStat'
+        recentHires:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentHire'
+
+    EmployeeStatusBreakdown:
+      type: object
+      properties:
+        permanent:
+          type: integer
+        contract:
+          type: integer
+        probation:
+          type: integer
+        intern:
+          type: integer
+        resigned:
+          type: integer
+
+    DepartmentEmployeeStat:
+      type: object
+      properties:
+        departmentId:
+          type: string
+          format: uuid
+        departmentName:
+          type: string
+        employeeCount:
+          type: integer
+        activeCount:
+          type: integer
+
+    JobLevelStat:
+      type: object
+      properties:
+        level:
+          type: string
+        employeeCount:
+          type: integer
+
+    RecentHire:
+      type: object
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        employeeName:
+          type: string
+        position:
+          type: string
+        joinDate:
+          type: string
+          format: date
+
+    RecentActivitiesResponse:
+      type: object
+      properties:
+        activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentActivity'
+        total:
+          type: integer
+
+    RecentActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        description:
+          type: string
+
+    # --- Audit Schemas ---
+    AuditLogResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        userName:
+          type: string
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+          nullable: true
+        oldData:
+          type: object
+          nullable: true
+        newData:
+          type: object
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogPagination:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogListResponse'
+        page:
+          type: integer
+        perPage:
+          type: integer
+        total:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        userName:
+          type: string
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Paginated Responses ---
+    PaginatedUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedEmployeeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeeResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedAttendanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedPayrollListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayrollListResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedLeaveRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaveRequestResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedOvertimeRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OvertimeRequestResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PaginatedDepartmentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        statusCode:
+          type: integer
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
