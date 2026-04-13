@@ -1,0 +1,21 @@
+name: HRIS Service Deploy
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ["self-hosted", "Linux", "X64", "development"]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Deploy
+        run: docker compose up -d --build
+
+      - name: Cleanup
+        run: docker image prune -f

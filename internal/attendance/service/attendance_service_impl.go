@@ -36,7 +36,7 @@ func NewAttendanceService(
 }
 
 func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto.ClockInRequest) (*dto.ClockInResponse, error) {
-	// 1. Get employee by userID (MongoDB) -> PostgreSQL
+	// 1. Get employee by userID
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID format: %w", err)

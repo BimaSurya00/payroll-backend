@@ -141,10 +141,10 @@ func (s *employeeService) GetAllEmployees(ctx context.Context, page, perPage int
 		return nil, err
 	}
 
-	// Fetch user data from MongoDB for each employee
+	// Fetch user data for each employee
 	employeeResponses := make([]*dto.EmployeeResponse, 0, len(employees))
 	for _, emp := range employees {
-		// Get user from MongoDB using the user_id
+		// Get user using the user_id
 		user, err := s.userRepo.FindByID(ctx, emp.UserID.String())
 		if err != nil {
 			// If user not found, still include employee but with empty user data
@@ -211,7 +211,7 @@ func (s *employeeService) GetEmployeeByID(ctx context.Context, id string, compan
 		return nil, fmt.Errorf("failed to get employee: %w", err)
 	}
 
-	// Fetch user data from MongoDB
+	// Fetch user data
 	user, err := s.userRepo.FindByID(ctx, employeeData.UserID.String())
 	if err != nil {
 		// Return employee without user data if user not found (but with schedule)
@@ -334,7 +334,7 @@ func (s *employeeService) UpdateEmployee(ctx context.Context, id string, company
 		return nil, err
 	}
 
-	// Fetch user data from MongoDB
+	// Fetch user data
 	user, err := s.userRepo.FindByID(ctx, updatedData.UserID.String())
 	if err != nil {
 		// Return employee without user data if user not found
@@ -402,7 +402,7 @@ func (s *employeeService) DeleteEmployee(ctx context.Context, id string, company
 		return err
 	}
 
-	// Delete associated user (MongoDB)
+	// Delete associated user
 	if err := s.userRepo.Delete(ctx, employee.UserID.String()); err != nil {
 		// Log error but don't fail - employee is already deleted
 		// In production, you might want to implement a cleanup job
@@ -423,7 +423,7 @@ func (s *employeeService) GetMyProfile(ctx context.Context, userID string) (*dto
 		return nil, ErrEmployeeNotFound
 	}
 
-	// Get user data from MongoDB
+	// Get user data
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)

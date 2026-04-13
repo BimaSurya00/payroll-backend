@@ -80,7 +80,7 @@ func (s *overtimeService) CreateOvertimeRequest(ctx context.Context, userID stri
 		return nil, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -171,7 +171,7 @@ func (s *overtimeService) GetMyOvertimeRequests(ctx context.Context, userID stri
 		return nil, 0, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("user not found: %w", err)
@@ -257,7 +257,7 @@ func (s *overtimeService) GetOvertimeRequestByID(ctx context.Context, id string,
 		return nil, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB using employee.UserID
+	// Get user using employee.UserID
 	user, err := s.userRepo.FindByID(ctx, employee.UserID.String())
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -291,7 +291,7 @@ func (s *overtimeService) GetPendingOvertimeRequests(ctx context.Context, compan
 			continue
 		}
 
-		// Get user from MongoDB using employee.UserID
+		// Get user using employee.UserID
 		user, err := s.userRepo.FindByID(ctx, employee.UserID.String())
 		if err != nil {
 			continue
@@ -348,7 +348,7 @@ func (s *overtimeService) ApproveOvertimeRequest(ctx context.Context, id string,
 		return nil, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB using employee.UserID
+	// Get user using employee.UserID
 	user, err := s.userRepo.FindByID(ctx, employee.UserID.String())
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -396,7 +396,7 @@ func (s *overtimeService) RejectOvertimeRequest(ctx context.Context, id string, 
 		return nil, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB using employee.UserID
+	// Get user using employee.UserID
 	user, err := s.userRepo.FindByID(ctx, employee.UserID.String())
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -521,7 +521,7 @@ func (s *overtimeService) CalculateOvertimePay(ctx context.Context, employeeID s
 		return nil, fmt.Errorf("employee not found: %w", err)
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)

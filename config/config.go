@@ -8,14 +8,12 @@ import (
 )
 
 type Config struct {
-	App        AppConfig
-	MongoDB    MongoDBConfig
-	Postgres   PostgresConfig
-	KeyDB      KeyDBConfig
-	JWT        JWTConfig
-	CORS       CORSConfig
-	MinIO      MinIOConfig
-	Attendance AttendanceConfig
+	App      AppConfig
+	Postgres PostgresConfig
+	KeyDB    KeyDBConfig
+	JWT      JWTConfig
+	CORS     CORSConfig
+	MinIO    MinIOConfig
 }
 
 type AppConfig struct {
@@ -24,13 +22,6 @@ type AppConfig struct {
 	Port     string
 	Host     string
 	Timezone string
-}
-
-type MongoDBConfig struct {
-	URI         string
-	Database    string
-	MaxPoolSize int
-	MinPoolSize int
 }
 
 type PostgresConfig struct {
@@ -69,12 +60,6 @@ type MinIOConfig struct {
 	UseSSL    bool
 }
 
-type AttendanceConfig struct {
-	OfficeLat           float64
-	OfficeLong          float64
-	AllowedRadiusMeters int
-}
-
 func LoadConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
@@ -102,12 +87,6 @@ func LoadConfig() (*Config, error) {
 			Port:     viper.GetString("APP_PORT"),
 			Host:     viper.GetString("APP_HOST"),
 			Timezone: viper.GetString("APP_TIMEZONE"),
-		},
-		MongoDB: MongoDBConfig{
-			URI:         viper.GetString("MONGODB_URI"),
-			Database:    viper.GetString("MONGODB_DATABASE"),
-			MaxPoolSize: viper.GetInt("MONGODB_MAX_POOL_SIZE"),
-			MinPoolSize: viper.GetInt("MONGODB_MIN_POOL_SIZE"),
 		},
 		Postgres: PostgresConfig{
 			Host:     viper.GetString("POSTGRES_HOST"),
@@ -140,11 +119,6 @@ func LoadConfig() (*Config, error) {
 			Bucket:    viper.GetString("MINIO_BUCKET"),
 			UseSSL:    viper.GetBool("MINIO_USE_SSL"),
 		},
-		Attendance: AttendanceConfig{
-			OfficeLat:           viper.GetFloat64("OFFICE_LAT"),
-			OfficeLong:          viper.GetFloat64("OFFICE_LONG"),
-			AllowedRadiusMeters: viper.GetInt("ALLOWED_RADIUS_METERS"),
-		},
 	}
 
 	if err := validateConfig(config); err != nil {
@@ -157,9 +131,6 @@ func LoadConfig() (*Config, error) {
 func validateConfig(cfg *Config) error {
 	if cfg.App.Port == "" {
 		return fmt.Errorf("APP_PORT is required")
-	}
-	if cfg.MongoDB.URI == "" {
-		return fmt.Errorf("MONGODB_URI is required")
 	}
 	if cfg.Postgres.Host == "" {
 		return fmt.Errorf("POSTGRES_HOST is required")

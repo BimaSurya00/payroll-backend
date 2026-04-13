@@ -109,7 +109,7 @@ func (s *leaveService) CreateLeaveRequest(ctx context.Context, employeeID string
 		return nil, fmt.Errorf("failed to find employee: %w", err)
 	}
 
-	// Fetch user from MongoDB to get name
+	// Fetch user to get name
 	user, err := s.userRepo.FindByID(ctx, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -238,7 +238,7 @@ func (s *leaveService) GetMyLeaveRequests(ctx context.Context, userID string, pa
 		return nil, 0, fmt.Errorf("failed to count leave requests: %w", err)
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("user not found: %w", err)
@@ -372,7 +372,7 @@ func (s *leaveService) GetLeaveRequestByID(ctx context.Context, id string, compa
 		return nil, ErrLeaveRequestNotFound
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, request.EmployeeID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -410,7 +410,7 @@ func (s *leaveService) GetPendingLeaveRequests(ctx context.Context, companyID st
 		}
 	}
 
-	// Batch fetch users from MongoDB
+	// Batch fetch users
 	userIDSlice := make([]string, 0, len(userIDs))
 	for id := range userIDs {
 		userIDSlice = append(userIDSlice, id)
@@ -669,7 +669,7 @@ func (s *leaveService) GetMyLeaveBalances(ctx context.Context, userID string, ye
 		return nil, fmt.Errorf("failed to find employee: %w", err)
 	}
 
-	// Get user from MongoDB
+	// Get user
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)

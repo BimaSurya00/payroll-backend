@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
-	// Database connection string
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://postgres:postgres@localhost:5432/hris_db?sslmode=disable"
+		log.Fatal("DATABASE_URL environment variable is required")
 	}
 
 	conn, err := pgx.Connect(nil, dbURL)
@@ -22,60 +23,88 @@ func main() {
 	}
 	defer conn.Close(nil)
 
-	fmt.Println("Running migration 000005_add_employee_fields...")
-
-	// Read migration file
-	migrationSQL := `
--- Add employment_status column
-ALTER TABLE employees
-ADD COLUMN IF NOT EXISTS employment_status VARCHAR(20) DEFAULT 'PROBATION'
-CHECK (employment_status IN ('PERMANENT', 'CONTRACT', 'PROBATION'));
-
--- Add job_level column
-ALTER TABLE employees
-ADD COLUMN IF NOT EXISTS job_level VARCHAR(20) DEFAULT 'STAFF'
-CHECK (job_level IN ('CEO', 'MANAGER', 'SUPERVISOR', 'STAFF'));
-
--- Add gender column
-ALTER TABLE employees
-ADD COLUMN IF NOT EXISTS gender VARCHAR(10)
-CHECK (gender IN ('MALE', 'FEMALE'));
-
--- Add division column
-ALTER TABLE employees
-ADD COLUMN IF NOT EXISTS division VARCHAR(100) DEFAULT 'GENERAL';
-
--- Add comments for documentation
-COMMENT ON COLUMN employees.employment_status IS 'Employment status: PERMANENT, CONTRACT, PROBATION';
-COMMENT ON COLUMN employees.job_level IS 'Job level: CEO, MANAGER, SUPERVISOR, STAFF';
-COMMENT ON COLUMN employees.gender IS 'Gender: MALE, FEMALE';
-COMMENT ON COLUMN employees.division IS 'Department/Division: IT, HR, FINANCE, MARKETING, OPERATIONS, GENERAL';
-
--- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_employees_employment_status ON employees(employment_status);
-CREATE INDEX IF NOT EXISTS idx_employees_job_level ON employees(job_level);
-CREATE INDEX IF NOT EXISTS idx_employees_division ON employees(division);
-CREATE INDEX IF NOT EXISTS idx_employees_gender ON employees(gender);
-
--- Update existing records to have default values
-UPDATE employees
-SET
-    employment_status = 'PERMANENT',
-    job_level = 'STAFF',
-    division = 'GENERAL'
-WHERE employment_status IS NULL
-   OR job_level IS NULL
-   OR division IS NULL;
-`
-
-	// Execute migration
-	_, err = conn.Exec(nil, migrationSQL)
-	if err != nil {
-		log.Fatalf("Migration failed: %v\n", err)
+	migrationDir := os.Getenv("MIGRATION_DIR")
+	if migrationDir == "" {
+		migrationDir = "/migrations"
 	}
 
-	fmt.Println("✓ Migration completed successfully!")
-	fmt.Println("✓ Added employment_status, job_level, gender, and division columns")
-	fmt.Println("✓ Created indexes for better query performance")
-	fmt.Println("✓ Updated existing records with default values")
+	ensureMigrationsTable(conn)
+	applied := getAppliedMigrations(conn)
+
+	files, err := filepath.Glob(filepath.Join(migrationDir, "*.up.sql"))
+	if err != nil {
+		log.Fatalf("Failed to read migration files: %v\n", err)
+	}
+
+	sort.Strings(files)
+
+	count := 0
+	for _, file := range files {
+		name := filepath.Base(file)
+		if applied[name] {
+			fmt.Printf("Skipping %s (already applied)\n", name)
+			continue
+		}
+
+		sql, err := os.ReadFile(file)
+		if err != nil {
+			log.Fatalf("Failed to read %s: %v\n", name, err)
+		}
+
+		tx, err := conn.Begin(nil)
+		if err != nil {
+			log.Fatalf("Failed to begin transaction: %v\n", err)
+		}
+
+		_, err = tx.Exec(nil, string(sql))
+		if err != nil {
+			tx.Rollback(nil)
+			log.Fatalf("Migration %s failed: %v\n", name, err)
+		}
+
+		_, err = tx.Exec(nil, "INSERT INTO schema_migrations (filename) VALUES ($1)", name)
+		if err != nil {
+			tx.Rollback(nil)
+			log.Fatalf("Failed to record migration %s: %v\n", name, err)
+		}
+
+		if err := tx.Commit(nil); err != nil {
+			log.Fatalf("Failed to commit migration %s: %v\n", name, err)
+		}
+
+		fmt.Printf("Applied %s\n", name)
+		count++
+	}
+
+	fmt.Printf("Done. %d migration(s) applied.\n", count)
+}
+
+func ensureMigrationsTable(conn *pgx.Conn) {
+	_, err := conn.Exec(nil, `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			filename VARCHAR(255) PRIMARY KEY,
+			applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)
+	`)
+	if err != nil {
+		log.Fatalf("Failed to create schema_migrations table: %v\n", err)
+	}
+}
+
+func getAppliedMigrations(conn *pgx.Conn) map[string]bool {
+	rows, err := conn.Query(nil, "SELECT filename FROM schema_migrations")
+	if err != nil {
+		return make(map[string]bool)
+	}
+	defer rows.Close()
+
+	applied := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			continue
+		}
+		applied[strings.TrimSpace(name)] = true
+	}
+	return applied
 }

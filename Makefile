@@ -90,10 +90,34 @@ deps:
 	@echo "$(GREEN)Downloading dependencies...$(NC)"
 	$(GOMOD) download
 
-## migrate: Run database migrations (placeholder)
-migrate:
-	@echo "$(GREEN)Running migrations...$(NC)"
-	@echo "Implement your migration logic here"
+## migrate-up: Run all pending database migrations
+migrate-up:
+	@echo "$(GREEN)Running migrations (up)...$(NC)"
+	@if [ -z "$$DATABASE_URL" ]; then \
+		DATABASE_URL="postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DATABASE)?sslmode=disable"; \
+	fi; \
+	for f in database/migrations/*.up.sql; do \
+		echo "Applying $$f ..."; \
+		PGPASSWORD=$$(echo "$$DATABASE_URL" | sed -n 's/.*:\([^@]*\)@.*/\1/p') \
+		psql -h $$(echo "$$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p') \
+			-p $$(echo "$$DATABASE_URL" | sed -n 's/.*@\([^/]*\)\/.*/\1/p' | cut -d: -f2) \
+			-U $$(echo "$$DATABASE_URL" | sed -n 's/.*://;s/\/.*//p' | cut -d@ -f1) \
+			-d $$(echo "$$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p') \
+			-f "$$f"; \
+	done; \
+	echo "$(GREEN)All migrations applied!$(NC)"
+
+## migrate: Run database migrations (alias for migrate-up)
+migrate: migrate-up
+
+## migrate-docker: Run migrations inside Docker container
+migrate-docker:
+	@echo "$(GREEN)Running migrations via Docker...$(NC)"
+	docker run --rm --network hris-network \
+		-e DATABASE_URL="postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DATABASE)?sslmode=disable" \
+		-v $(CURDIR)/database/migrations:/migrations \
+		golang:1.24-bookworm \
+		go run /migrations/migrate.go
 
 ## seed: Run database seeders
 seed:
