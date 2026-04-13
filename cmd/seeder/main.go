@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"hris/database/seeder"
@@ -13,8 +14,15 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// Connect to database
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/fiber_app?sslmode=disable")
+	dbHost := getEnv("POSTGRES_HOST", "localhost")
+	dbPort := getEnv("POSTGRES_PORT", "5432")
+	dbUser := getEnv("POSTGRES_USER", "postgres")
+	dbPass := getEnv("POSTGRES_PASSWORD", "postgres")
+	dbName := getEnv("POSTGRES_DATABASE", "fiber_app")
+
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbPort, dbName)
+
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -32,4 +40,11 @@ func main() {
 	}
 
 	fmt.Println("\n✅ All seeders completed successfully!")
+}
+
+func getEnv(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
 }
