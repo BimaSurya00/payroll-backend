@@ -91,14 +91,19 @@ services:
   keydb:
     image: eqalpha/keydb:latest
     container_name: hris-keydb
-    command: keydb-server --appendonly yes --requirepass ${KEYDB_PASSWORD}
+    command: >
+      sh -c "if [ -n '${KEYDB_PASSWORD}' ]; then
+        keydb-server --appendonly yes --requirepass '${KEYDB_PASSWORD}';
+      else
+        keydb-server --appendonly yes --protected-mode no;
+      fi"
     volumes:
       - keydb-data:/data
     networks:
       - hris-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "keydb-cli", "-a", "${KEYDB_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "if [ -n '${KEYDB_PASSWORD}' ]; then keydb-cli -a '${KEYDB_PASSWORD}' ping; else keydb-cli ping; fi"]
       interval: 10s
       timeout: 5s
       retries: 5
