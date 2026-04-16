@@ -41,12 +41,15 @@ func (s *companyServiceImpl) Create(ctx context.Context, req *dto.CreateCompanyR
 	}
 
 	company := &entity.Company{
-		ID:           uuid.New().String(),
-		Name:         req.Name,
-		Slug:         req.Slug,
-		IsActive:     true,
-		Plan:         plan,
-		MaxEmployees: maxEmployees,
+		ID:                  uuid.New().String(),
+		Name:                req.Name,
+		Slug:                req.Slug,
+		IsActive:            true,
+		Plan:                plan,
+		MaxEmployees:        maxEmployees,
+		OfficeLat:           req.OfficeLat,
+		OfficeLong:          req.OfficeLong,
+		AllowedRadiusMeters: req.AllowedRadiusMeters,
 	}
 
 	if err := s.companyRepo.Create(ctx, company); err != nil {
@@ -101,6 +104,15 @@ func (s *companyServiceImpl) Update(ctx context.Context, id string, req *dto.Upd
 	}
 	if req.MaxEmployees != nil {
 		company.MaxEmployees = *req.MaxEmployees
+	}
+	if req.OfficeLat != nil {
+		company.OfficeLat = req.OfficeLat
+	}
+	if req.OfficeLong != nil {
+		company.OfficeLong = req.OfficeLong
+	}
+	if req.AllowedRadiusMeters != nil {
+		company.AllowedRadiusMeters = req.AllowedRadiusMeters
 	}
 
 	if err := s.companyRepo.Update(ctx, company); err != nil {

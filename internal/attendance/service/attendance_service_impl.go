@@ -11,6 +11,7 @@ import (
 	attendanceEntity "hris/internal/attendance/entity"
 	"hris/internal/attendance/helper"
 	"hris/internal/attendance/repository"
+	companyRepo "hris/internal/company/repository"
 	employeeRepo "hris/internal/employee/repository"
 	scheduleEntity "hris/internal/schedule/entity"
 	scheduleRepo "hris/internal/schedule/repository"
@@ -21,22 +22,24 @@ type attendanceService struct {
 	attendanceRepo repository.AttendanceRepository
 	employeeRepo   employeeRepo.EmployeeRepository
 	scheduleRepo   scheduleRepo.ScheduleRepository
+	companyRepo    companyRepo.CompanyRepository
 }
 
 func NewAttendanceService(
 	attendanceRepo repository.AttendanceRepository,
 	employeeRepo employeeRepo.EmployeeRepository,
 	scheduleRepo scheduleRepo.ScheduleRepository,
+	companyRepo companyRepo.CompanyRepository,
 ) AttendanceService {
 	return &attendanceService{
 		attendanceRepo: attendanceRepo,
 		employeeRepo:   employeeRepo,
 		scheduleRepo:   scheduleRepo,
+		companyRepo:    companyRepo,
 	}
 }
 
 func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto.ClockInRequest) (*dto.ClockInResponse, error) {
-	// 1. Get employee by userID
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID format: %w", err)
@@ -50,7 +53,6 @@ func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto
 		return nil, fmt.Errorf("failed to get employee: %w", err)
 	}
 
-	// 2. Get schedule
 	var schedule *scheduleEntity.Schedule
 	if employee.ScheduleID != nil {
 		schedule, err = s.scheduleRepo.FindByID(ctx, *employee.ScheduleID)
@@ -64,7 +66,18 @@ func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto
 		return nil, ErrScheduleNotFound
 	}
 
-	// 3. Check if already clocked in today
+	company, err := s.companyRepo.FindByID(ctx, employee.CompanyID.String())
+	if err != nil {
+		if errors.Is(err, companyRepo.ErrCompanyNotFound) {
+			return nil, ErrCompanyNotFound
+		}
+		return nil, fmt.Errorf("failed to get company: %w", err)
+	}
+
+	if company.OfficeLat == nil || company.OfficeLong == nil || company.AllowedRadiusMeters == nil {
+		return nil, ErrOfficeNotSet
+	}
+
 	now := sharedHelper.Now()
 	today := sharedHelper.Today()
 
@@ -76,19 +89,21 @@ func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto
 		return nil, fmt.Errorf("failed to check today's attendance: %w", err)
 	}
 
-	// 4. Validate GPS location
-	distance := helper.CalculateDistance(req.Lat, req.Long, schedule.OfficeLat, schedule.OfficeLong)
-	if !helper.IsWithinRadius(req.Lat, req.Long, schedule.OfficeLat, schedule.OfficeLong, float64(schedule.AllowedRadiusMeters)) {
+	officeLat := *company.OfficeLat
+	officeLong := *company.OfficeLong
+	allowedRadius := float64(*company.AllowedRadiusMeters)
+
+	distance := helper.CalculateDistance(req.Lat, req.Long, officeLat, officeLong)
+	if distance > allowedRadius {
 		return nil, ErrOutOfOfficeRange
 	}
 
-	// 5. Determine status (PRESENT/LATE)
 	status := s.determineStatus(now, schedule.TimeIn, schedule.AllowedLateMinutes)
 
-	// 6. Create attendance
 	attendanceID := uuid.New()
 	attendance := &attendanceEntity.Attendance{
 		ID:          attendanceID.String(),
+		CompanyID:   employee.CompanyID.String(),
 		EmployeeID:  employee.ID.String(),
 		ScheduleID:  &schedule.ID,
 		Date:        today,
@@ -115,7 +130,6 @@ func (s *attendanceService) ClockIn(ctx context.Context, userID string, req *dto
 }
 
 func (s *attendanceService) ClockOut(ctx context.Context, userID string, req *dto.ClockOutRequest) (*dto.ClockOutResponse, error) {
-	// 1. Get employee
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID format: %w", err)
@@ -129,7 +143,6 @@ func (s *attendanceService) ClockOut(ctx context.Context, userID string, req *dt
 		return nil, fmt.Errorf("failed to get employee: %w", err)
 	}
 
-	// 2. Get today's attendance
 	now := sharedHelper.Now()
 	today := sharedHelper.Today()
 
@@ -138,20 +151,15 @@ func (s *attendanceService) ClockOut(ctx context.Context, userID string, req *dt
 		if errors.Is(err, repository.ErrAttendanceNotFound) {
 			return nil, ErrNotClockedIn
 		}
-		return nil, fmt.Errorf("failed to get attendance: %w", err)
+		return nil, fmt.Errorf("failed to get the attendance: %w", err)
 	}
 
-	// 3. Validate GPS location (optional - get schedule)
 	var distance float64
-	if attendance.ScheduleID != nil {
-		scheduleUUID, _ := uuid.Parse(*attendance.ScheduleID)
-		schedule, err := s.scheduleRepo.FindByID(ctx, scheduleUUID)
-		if err == nil {
-			distance = helper.CalculateDistance(req.Lat, req.Long, schedule.OfficeLat, schedule.OfficeLong)
-		}
+	company, err := s.companyRepo.FindByID(ctx, employee.CompanyID.String())
+	if err == nil && company.OfficeLat != nil && company.OfficeLong != nil {
+		distance = helper.CalculateDistance(req.Lat, req.Long, *company.OfficeLat, *company.OfficeLong)
 	}
 
-	// 4. Update clock out
 	updates := map[string]interface{}{
 		"clock_out_time": now,
 		"clock_out_lat":  req.Lat,
@@ -229,7 +237,6 @@ func (s *attendanceService) determineStatus(clockInTime time.Time, scheduleTimeI
 }
 
 func (s *attendanceService) GetAllAttendances(ctx context.Context, filter GetAllAttendanceFilter, page, perPage int, path string, companyID string) (*Pagination[*dto.AttendanceResponse], error) {
-	// Convert service filter to repository filter with company ID
 	repoFilter := repository.AttendanceFilter{
 		EmployeeID: filter.EmployeeID,
 		ScheduleID: filter.ScheduleID,
@@ -263,7 +270,6 @@ func (s *attendanceService) GetAllAttendances(ctx context.Context, filter GetAll
 }
 
 func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year int, companyID string) (*dto.MonthlyAttendanceReport, error) {
-	// Validate month and year
 	if month < 1 || month > 12 {
 		return nil, errors.New("invalid month")
 	}
@@ -271,17 +277,14 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 		return nil, errors.New("invalid year")
 	}
 
-	// Calculate date range
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, -1)
 
-	// Get summaries for employees in the company
 	summaries, err := s.attendanceRepo.GetMonthlySummaryByCompany(ctx, companyID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build report items
 	items := make([]dto.AttendanceReportItem, 0, len(summaries))
 	var totalPresent, totalLate, totalAbsent, totalLeave, totalDays int
 	var totalAttendanceRate float64
@@ -289,14 +292,14 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 	for _, summary := range summaries {
 		employee, err := s.employeeRepo.FindByID(ctx, summary.EmployeeID)
 		if err != nil {
-			continue // Skip if employee not found
+			continue
 		}
 
 		attendanceRate := dto.CalculateAttendanceRate(summary.TotalPresent, summary.TotalLate, summary.TotalDays)
 
 		item := dto.AttendanceReportItem{
 			EmployeeID:     summary.EmployeeID.String(),
-			EmployeeName:   employee.Position, // Using Position as name
+			EmployeeName:   employee.FullName,
 			Position:       employee.Position,
 			Division:       employee.Division,
 			TotalPresent:   summary.TotalPresent,
@@ -309,7 +312,6 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 		}
 		items = append(items, item)
 
-		// Aggregate totals
 		totalPresent += summary.TotalPresent
 		totalLate += summary.TotalLate
 		totalAbsent += summary.TotalAbsent
@@ -321,7 +323,6 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 		totalAttendanceRate = dto.CalculateAttendanceRate(totalPresent, totalLate, totalDays)
 	}
 
-	// Build aggregate summary
 	summary := dto.AttendanceReportItem{
 		EmployeeID:     "",
 		EmployeeName:   "All Employees",
@@ -347,7 +348,6 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 }
 
 func (s *attendanceService) GetMyMonthlySummary(ctx context.Context, userID string, month, year int) (*dto.MyAttendanceSummary, error) {
-	// Validate month and year
 	if month < 1 || month > 12 {
 		return nil, errors.New("invalid month")
 	}
@@ -355,17 +355,14 @@ func (s *attendanceService) GetMyMonthlySummary(ctx context.Context, userID stri
 		return nil, errors.New("invalid year")
 	}
 
-	// Get employee by user ID
 	employee, err := s.employeeRepo.FindByUserID(ctx, uuid.MustParse(userID))
 	if err != nil {
 		return nil, ErrEmployeeNotFound
 	}
 
-	// Calculate date range
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, -1)
 
-	// Get attendance summary
 	summary, err := s.attendanceRepo.GetAttendanceSummaryByPeriod(ctx, employee.ID, startDate, endDate)
 	if err != nil {
 		return nil, err
@@ -385,41 +382,32 @@ func (s *attendanceService) GetMyMonthlySummary(ctx context.Context, userID stri
 }
 
 func (s *attendanceService) CreateCorrection(ctx context.Context, adminID string, req *dto.CreateCorrectionRequest, companyID string) (*dto.AttendanceResponse, error) {
-	// Parse employee ID
 	employeeUUID, err := uuid.Parse(req.EmployeeID)
 	if err != nil {
 		return nil, errors.New("invalid employee ID")
 	}
 
-	// Verify employee belongs to the company
 	_, err = s.employeeRepo.FindByIDAndCompany(ctx, employeeUUID, companyID)
 	if err != nil {
 		return nil, errors.New("employee not found or does not belong to your company")
 	}
 
-	// Parse date
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
 		return nil, errors.New("invalid date format")
 	}
 
-	// Check if attendance already exists for this employee on this date
 	existing, _ := s.attendanceRepo.FindByEmployeeAndDate(ctx, employeeUUID, date)
 	if existing != nil {
 		return nil, errors.New("attendance already exists for this date, use update correction instead")
 	}
 
-	// Store company ID in attendance
-	_ = companyID // Use companyID to avoid unused variable error
-
-	// Parse clock in time
 	clockInTime, err := time.Parse("15:04", req.ClockIn)
 	if err != nil {
 		return nil, errors.New("invalid clock in time format")
 	}
 	clockInDateTime := time.Date(date.Year(), date.Month(), date.Day(), clockInTime.Hour(), clockInTime.Minute(), 0, 0, time.UTC)
 
-	// Parse clock out time if provided
 	var clockOutDateTime *time.Time
 	if req.ClockOut != "" {
 		clockOutTime, err := time.Parse("15:04", req.ClockOut)
@@ -430,10 +418,10 @@ func (s *attendanceService) CreateCorrection(ctx context.Context, adminID string
 		clockOutDateTime = &dt
 	}
 
-	// Create attendance with correction info
-	now := time.Now()
+	now := sharedHelper.Now()
 	attendance := &attendanceEntity.Attendance{
 		ID:             uuid.New().String(),
+		CompanyID:      companyID,
 		EmployeeID:     employeeUUID.String(),
 		Date:           date,
 		ClockInTime:    &clockInDateTime,
@@ -454,30 +442,25 @@ func (s *attendanceService) CreateCorrection(ctx context.Context, adminID string
 }
 
 func (s *attendanceService) UpdateCorrection(ctx context.Context, adminID, attendanceID string, req *dto.UpdateCorrectionRequest, companyID string) (*dto.AttendanceResponse, error) {
-	// Parse attendance ID
 	attendanceUUID, err := uuid.Parse(attendanceID)
 	if err != nil {
 		return nil, errors.New("invalid attendance ID")
 	}
 
-	// Find existing attendance
 	attendance, err := s.attendanceRepo.FindByID(ctx, attendanceUUID)
 	if err != nil {
 		return nil, repository.ErrAttendanceNotFound
 	}
 
-	// Verify the attendance belongs to an employee in the company
 	employeeUUID, _ := uuid.Parse(attendance.EmployeeID)
 	_, err = s.employeeRepo.FindByIDAndCompany(ctx, employeeUUID, companyID)
 	if err != nil {
 		return nil, errors.New("attendance not found or does not belong to your company")
 	}
 
-	// Update fields if provided
 	updates := make(map[string]interface{})
 
 	if req.ClockIn != nil {
-		// Parse and update clock in time
 		clockInTime, err := time.Parse("15:04", *req.ClockIn)
 		if err != nil {
 			return nil, errors.New("invalid clock in time format")
@@ -487,7 +470,6 @@ func (s *attendanceService) UpdateCorrection(ctx context.Context, adminID, atten
 	}
 
 	if req.ClockOut != nil {
-		// Parse and update clock out time
 		clockOutTime, err := time.Parse("15:04", *req.ClockOut)
 		if err != nil {
 			return nil, errors.New("invalid clock out time format")
@@ -504,19 +486,17 @@ func (s *attendanceService) UpdateCorrection(ctx context.Context, adminID, atten
 		updates["notes"] = *req.Notes
 	}
 
-	// Always update correction info
+	now := sharedHelper.Now()
 	updates["corrected_by"] = adminID
-	updates["corrected_at"] = time.Now()
+	updates["corrected_at"] = now
 	if req.Notes != nil {
 		updates["correction_note"] = *req.Notes
 	}
 
-	// Update attendance
 	if err := s.attendanceRepo.Update(ctx, attendanceUUID, updates); err != nil {
 		return nil, err
 	}
 
-	// Fetch updated attendance
 	updatedAttendance, err := s.attendanceRepo.FindByID(ctx, attendanceUUID)
 	if err != nil {
 		return nil, err

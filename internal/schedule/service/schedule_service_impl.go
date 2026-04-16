@@ -25,18 +25,15 @@ func (s *scheduleService) CreateSchedule(ctx context.Context, req *dto.CreateSch
 	scheduleID := uuid.New().String()
 
 	schedule := &entity.Schedule{
-		ID:                  scheduleID,
-		CompanyID:           companyID,
-		Name:                req.Name,
-		TimeIn:              req.TimeIn,
-		TimeOut:             req.TimeOut,
-		AllowedLateMinutes:  req.AllowedLateMinutes,
-		OfficeLat:           req.OfficeLat,
-		OfficeLong:          req.OfficeLong,
-		AllowedRadiusMeters: req.AllowedRadiusMeters,
-		Description:         req.Description,
-		CreatedAt:           time.Now(),
-		UpdatedAt:           time.Now(),
+		ID:                 scheduleID,
+		CompanyID:          companyID,
+		Name:               req.Name,
+		TimeIn:             req.TimeIn,
+		TimeOut:            req.TimeOut,
+		AllowedLateMinutes: req.AllowedLateMinutes,
+		Description:        req.Description,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
 	}
 
 	if err := s.repo.Create(ctx, schedule); err != nil {
@@ -116,15 +113,6 @@ func (s *scheduleService) UpdateSchedule(ctx context.Context, id string, company
 	}
 	if req.AllowedLateMinutes != nil {
 		updates["allowed_late_minutes"] = *req.AllowedLateMinutes
-	}
-	if req.OfficeLat != nil {
-		updates["office_lat"] = *req.OfficeLat
-	}
-	if req.OfficeLong != nil {
-		updates["office_long"] = *req.OfficeLong
-	}
-	if req.AllowedRadiusMeters != nil {
-		updates["allowed_radius_meters"] = *req.AllowedRadiusMeters
 	}
 	if req.Description != nil {
 		updates["description"] = *req.Description

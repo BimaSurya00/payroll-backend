@@ -6,6 +6,7 @@ import (
 	"hris/internal/attendance/handler"
 	"hris/internal/attendance/repository"
 	"hris/internal/attendance/service"
+	companyRepo "hris/internal/company/repository"
 	employeeRepo "hris/internal/employee/repository"
 	scheduleRepo "hris/internal/schedule/repository"
 	"hris/middleware"
@@ -17,15 +18,16 @@ func RegisterRoutes(
 	postgresDB *database.Postgres,
 	jwtAuth fiber.Handler,
 ) {
-	// Initialize dependencies
 	attendanceRepo := repository.NewAttendanceRepository(postgresDB.Pool)
 	employeeRepo := employeeRepo.NewEmployeeRepository(postgresDB.Pool)
 	scheduleRepo := scheduleRepo.NewScheduleRepository(postgresDB.Pool)
+	companyRepo := companyRepo.NewCompanyRepository(postgresDB.Pool)
 
 	attendanceService := service.NewAttendanceService(
 		attendanceRepo,
 		employeeRepo,
 		scheduleRepo,
+		companyRepo,
 	)
 	attendanceHandler := handler.NewAttendanceHandler(attendanceService)
 

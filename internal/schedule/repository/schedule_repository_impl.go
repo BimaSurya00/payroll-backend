@@ -26,9 +26,9 @@ func NewScheduleRepository(pool *pgxpool.Pool) ScheduleRepository {
 
 func (r *scheduleRepository) Create(ctx context.Context, schedule *entity.Schedule) error {
 	query := `
-		INSERT INTO schedules (id, company_id, name, time_in, time_out, allowed_late_minutes, 
-		                      office_lat, office_long, allowed_radius_meters, description, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO schedules (id, company_id, name, time_in, time_out, allowed_late_minutes,
+		                      description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -38,9 +38,6 @@ func (r *scheduleRepository) Create(ctx context.Context, schedule *entity.Schedu
 		schedule.TimeIn,
 		schedule.TimeOut,
 		schedule.AllowedLateMinutes,
-		schedule.OfficeLat,
-		schedule.OfficeLong,
-		schedule.AllowedRadiusMeters,
 		schedule.Description,
 		schedule.CreatedAt,
 		schedule.UpdatedAt,
@@ -52,7 +49,7 @@ func (r *scheduleRepository) Create(ctx context.Context, schedule *entity.Schedu
 func (r *scheduleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Schedule, error) {
 	query := `
 		SELECT id, name, time_in, time_out, allowed_late_minutes,
-		       office_lat, office_long, allowed_radius_meters, COALESCE(description, ''), created_at, updated_at
+		       COALESCE(description, ''), created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`
@@ -66,9 +63,6 @@ func (r *scheduleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entit
 		&schedule.TimeIn,
 		&schedule.TimeOut,
 		&schedule.AllowedLateMinutes,
-		&schedule.OfficeLat,
-		&schedule.OfficeLong,
-		&schedule.AllowedRadiusMeters,
 		&schedule.Description,
 		&schedule.CreatedAt,
 		&schedule.UpdatedAt,
@@ -87,7 +81,7 @@ func (r *scheduleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entit
 func (r *scheduleRepository) FindAll(ctx context.Context, skip, limit int64) ([]*entity.Schedule, error) {
 	query := `
 		SELECT id, name, time_in, time_out, allowed_late_minutes,
-		       office_lat, office_long, allowed_radius_meters, COALESCE(description, ''), created_at, updated_at
+		       COALESCE(description, ''), created_at, updated_at
 		FROM schedules
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -108,9 +102,6 @@ func (r *scheduleRepository) FindAll(ctx context.Context, skip, limit int64) ([]
 			&schedule.TimeIn,
 			&schedule.TimeOut,
 			&schedule.AllowedLateMinutes,
-			&schedule.OfficeLat,
-			&schedule.OfficeLong,
-			&schedule.AllowedRadiusMeters,
 			&schedule.Description,
 			&schedule.CreatedAt,
 			&schedule.UpdatedAt,
@@ -183,7 +174,6 @@ func (r *scheduleRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *scheduleRepository) FindByEmployeeCount(ctx context.Context, employeeID uuid.UUID) (int64, error) {
-	// Check if any employee is using this schedule
 	query := `SELECT COUNT(*) FROM employees WHERE schedule_id = $1`
 
 	var count int64
@@ -198,7 +188,7 @@ func (r *scheduleRepository) FindByEmployeeCount(ctx context.Context, employeeID
 func (r *scheduleRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUID, companyID string) (*entity.Schedule, error) {
 	query := `
 		SELECT id, company_id, name, time_in, time_out, allowed_late_minutes,
-		       office_lat, office_long, allowed_radius_meters, COALESCE(description, ''), created_at, updated_at
+		       COALESCE(description, ''), created_at, updated_at
 		FROM schedules
 		WHERE id = $1 AND company_id = $2
 	`
@@ -213,9 +203,6 @@ func (r *scheduleRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUI
 		&schedule.TimeIn,
 		&schedule.TimeOut,
 		&schedule.AllowedLateMinutes,
-		&schedule.OfficeLat,
-		&schedule.OfficeLong,
-		&schedule.AllowedRadiusMeters,
 		&schedule.Description,
 		&schedule.CreatedAt,
 		&schedule.UpdatedAt,
@@ -234,7 +221,7 @@ func (r *scheduleRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUI
 func (r *scheduleRepository) FindAllByCompany(ctx context.Context, companyID string, skip, limit int64) ([]*entity.Schedule, error) {
 	query := `
 		SELECT id, company_id, name, time_in, time_out, allowed_late_minutes,
-		       office_lat, office_long, allowed_radius_meters, COALESCE(description, ''), created_at, updated_at
+		       COALESCE(description, ''), created_at, updated_at
 		FROM schedules
 		WHERE company_id = $1
 		ORDER BY created_at DESC
@@ -257,9 +244,6 @@ func (r *scheduleRepository) FindAllByCompany(ctx context.Context, companyID str
 			&schedule.TimeIn,
 			&schedule.TimeOut,
 			&schedule.AllowedLateMinutes,
-			&schedule.OfficeLat,
-			&schedule.OfficeLong,
-			&schedule.AllowedRadiusMeters,
 			&schedule.Description,
 			&schedule.CreatedAt,
 			&schedule.UpdatedAt,

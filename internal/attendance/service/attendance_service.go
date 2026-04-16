@@ -15,6 +15,8 @@ var (
 	ErrOutOfOfficeRange = errors.New("out of office range")
 	ErrEmployeeNotFound = errors.New("employee not found")
 	ErrScheduleNotFound = errors.New("schedule not found")
+	ErrCompanyNotFound  = errors.New("company not found")
+	ErrOfficeNotSet     = errors.New("office location not configured for company")
 )
 
 type GetAllAttendanceFilter struct {

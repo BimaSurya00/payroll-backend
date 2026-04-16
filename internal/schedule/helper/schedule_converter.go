@@ -9,17 +9,14 @@ import (
 
 func ToScheduleResponse(schedule *entity.Schedule) *dto.ScheduleResponse {
 	return &dto.ScheduleResponse{
-		ID:                  schedule.ID,
-		Name:                schedule.Name,
-		TimeIn:              schedule.TimeIn,
-		TimeOut:             schedule.TimeOut,
-		AllowedLateMinutes:  schedule.AllowedLateMinutes,
-		OfficeLat:           schedule.OfficeLat,
-		OfficeLong:          schedule.OfficeLong,
-		AllowedRadiusMeters: schedule.AllowedRadiusMeters,
-		Description:         schedule.Description,
-		CreatedAt:           schedule.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:           schedule.UpdatedAt.Format(time.RFC3339),
+		ID:                 schedule.ID,
+		Name:               schedule.Name,
+		TimeIn:             schedule.TimeIn,
+		TimeOut:            schedule.TimeOut,
+		AllowedLateMinutes: schedule.AllowedLateMinutes,
+		Description:        schedule.Description,
+		CreatedAt:          schedule.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:          schedule.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
