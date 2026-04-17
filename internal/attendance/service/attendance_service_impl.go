@@ -156,8 +156,16 @@ func (s *attendanceService) ClockOut(ctx context.Context, userID string, req *dt
 
 	var distance float64
 	company, err := s.companyRepo.FindByID(ctx, employee.CompanyID.String())
-	if err == nil && company.OfficeLat != nil && company.OfficeLong != nil {
-		distance = helper.CalculateDistance(req.Lat, req.Long, *company.OfficeLat, *company.OfficeLong)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get company: %w", err)
+	}
+	if company.OfficeLat == nil || company.OfficeLong == nil || company.AllowedRadiusMeters == nil {
+		return nil, ErrOfficeNotSet
+	}
+	distance = helper.CalculateDistance(req.Lat, req.Long, *company.OfficeLat, *company.OfficeLong)
+	allowedRadius := float64(*company.AllowedRadiusMeters)
+	if distance > allowedRadius {
+		return nil, ErrOutOfOfficeRange
 	}
 
 	updates := map[string]interface{}{
