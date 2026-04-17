@@ -49,7 +49,6 @@ func (r *holidayRepository) FindByID(ctx context.Context, id string) (*entity.Ho
 	var holiday entity.Holiday
 	err := row.Scan(
 		&holiday.ID,
-		&holiday.CompanyID,
 		&holiday.Name,
 		&holiday.Date,
 		&holiday.Type,
@@ -58,6 +57,7 @@ func (r *holidayRepository) FindByID(ctx context.Context, id string) (*entity.Ho
 		&holiday.Description,
 		&holiday.CreatedAt,
 		&holiday.UpdatedAt,
+		&holiday.CompanyID,
 	)
 
 	if err != nil {
@@ -84,7 +84,6 @@ func (r *holidayRepository) FindAll(ctx context.Context, year int) ([]*entity.Ho
 		var holiday entity.Holiday
 		err := rows.Scan(
 			&holiday.ID,
-			&holiday.CompanyID,
 			&holiday.Name,
 			&holiday.Date,
 			&holiday.Type,
@@ -93,6 +92,7 @@ func (r *holidayRepository) FindAll(ctx context.Context, year int) ([]*entity.Ho
 			&holiday.Description,
 			&holiday.CreatedAt,
 			&holiday.UpdatedAt,
+			&holiday.CompanyID,
 		)
 		if err != nil {
 			return nil, err
@@ -117,7 +117,6 @@ func (r *holidayRepository) FindByDateRange(ctx context.Context, start, end time
 		var holiday entity.Holiday
 		err := rows.Scan(
 			&holiday.ID,
-			&holiday.CompanyID,
 			&holiday.Name,
 			&holiday.Date,
 			&holiday.Type,
@@ -126,6 +125,7 @@ func (r *holidayRepository) FindByDateRange(ctx context.Context, start, end time
 			&holiday.Description,
 			&holiday.CreatedAt,
 			&holiday.UpdatedAt,
+			&holiday.CompanyID,
 		)
 		if err != nil {
 			return nil, err
