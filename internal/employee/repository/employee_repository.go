@@ -90,7 +90,7 @@ type employeeRepository struct {
 }
 
 const employeeWithUserSelectCols = `
-	e.id, e.user_id, e.full_name,
+	e.id, e.company_id, e.user_id, e.full_name,
 	u.name as user_name, u.email as user_email,
 	e.position, e.phone_number, e.address, e.salary_base, e.join_date,
 	e.bank_name, e.bank_account_number, e.bank_account_holder, e.schedule_id,
@@ -117,7 +117,7 @@ func scanEmployeeWithUser(row interface {
 }) (*EmployeeWithUser, error) {
 	var e EmployeeWithUser
 	err := row.Scan(
-		&e.ID, &e.UserID, &e.FullName,
+		&e.ID, &e.CompanyID, &e.UserID, &e.FullName,
 		&e.UserName, &e.UserEmail,
 		&e.Position, &e.PhoneNumber, &e.Address, &e.SalaryBase, &e.JoinDate,
 		&e.BankName, &e.BankAccountNumber, &e.BankAccountHolder, &e.ScheduleID,

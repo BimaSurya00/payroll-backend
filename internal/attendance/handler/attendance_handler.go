@@ -53,7 +53,10 @@ func (h *AttendanceHandler) ClockIn(c *fiber.Ctx) error {
 		if err == service.ErrOutOfOfficeRange {
 			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
 		}
-		if err == service.ErrEmployeeNotFound || err == service.ErrScheduleNotFound {
+		if err == service.ErrOfficeNotSet {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		if err == service.ErrEmployeeNotFound || err == service.ErrScheduleNotFound || err == service.ErrCompanyNotFound {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to clock in", err.Error())
@@ -89,7 +92,13 @@ func (h *AttendanceHandler) ClockOut(c *fiber.Ctx) error {
 		if err == service.ErrNotClockedIn {
 			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
 		}
-		if err == service.ErrEmployeeNotFound {
+		if err == service.ErrOfficeNotSet {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		if err == service.ErrOutOfOfficeRange {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		if err == service.ErrEmployeeNotFound || err == service.ErrCompanyNotFound {
 			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
 		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to clock out", err.Error())
