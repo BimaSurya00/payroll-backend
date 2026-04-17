@@ -15,13 +15,7 @@ jobs:
         run: echo "${{ secrets.ENV_FILE }}" > .env
 
       - name: Run database migrations
-        run: |
-          source .env
-          docker run --rm --network hris-network \
-            -e DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DATABASE}?sslmode=disable" \
-            -v ./database/migrations:/migrations \
-            golang:1.24-bookworm \
-            go run /migrations/migrate.go
+        run: docker compose --profile migrate run --rm migrate
 
       - name: Deploy
         run: docker compose up -d --build

@@ -82,6 +82,21 @@ services:
       retries: 5
       start_period: 10s
 
+  migrate:
+    image: golang:1.24-bookworm
+    profiles:
+      - migrate
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DATABASE}?sslmode=disable
+    volumes:
+      - ./database/migrations:/migrations
+    networks:
+      - hris-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["go", "run", "/migrations/migrate.go"]
+
   keydb:
     image: eqalpha/keydb:latest
     container_name: hris-keydb
