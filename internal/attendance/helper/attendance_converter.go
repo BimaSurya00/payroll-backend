@@ -9,10 +9,11 @@ import (
 
 func ToAttendanceResponse(attendance *entity.Attendance) *dto.AttendanceResponse {
 	resp := &dto.AttendanceResponse{
-		ID:     attendance.ID,
-		Date:   attendance.Date.Format(time.RFC3339),
-		Status: attendance.Status,
-		Notes:  attendance.Notes,
+		ID:         attendance.ID,
+		EmployeeID: attendance.EmployeeID,
+		Date:       attendance.Date.Format(time.RFC3339),
+		Status:     attendance.Status,
+		Notes:      attendance.Notes,
 	}
 
 	if attendance.ClockInTime != nil {

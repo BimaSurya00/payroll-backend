@@ -216,6 +216,7 @@ func (s *attendanceService) GetHistory(ctx context.Context, userID string, page,
 	attendanceResponses := make([]*dto.AttendanceResponse, len(attendances))
 	for i, attendance := range attendances {
 		attendanceResponses[i] = helper.ToAttendanceResponse(attendance)
+		attendanceResponses[i].EmployeeName = employee.FullName
 	}
 
 	pagination := NewPagination(attendanceResponses, page, perPage, total, path)
@@ -268,8 +269,27 @@ func (s *attendanceService) GetAllAttendances(ctx context.Context, filter GetAll
 	}
 
 	attendanceResponses := make([]*dto.AttendanceResponse, len(attendances))
+
+	employeeUUIDs := make([]uuid.UUID, 0, len(attendances))
+	for _, a := range attendances {
+		if uid, err := uuid.Parse(a.EmployeeID); err == nil {
+			employeeUUIDs = append(employeeUUIDs, uid)
+		}
+	}
+
+	employeeMap := make(map[string]*employeeRepo.Employee)
+	employees, err := s.employeeRepo.FindByIDs(ctx, employeeUUIDs)
+	if err == nil {
+		for _, emp := range employees {
+			employeeMap[emp.ID.String()] = emp
+		}
+	}
+
 	for i, attendance := range attendances {
 		attendanceResponses[i] = helper.ToAttendanceResponse(attendance)
+		if emp, ok := employeeMap[attendance.EmployeeID]; ok {
+			attendanceResponses[i].EmployeeName = emp.FullName
+		}
 	}
 
 	pagination := NewPagination(attendanceResponses, page, perPage, total, path)
