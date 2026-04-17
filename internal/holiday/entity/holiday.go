@@ -4,6 +4,7 @@ import "time"
 
 type Holiday struct {
 	ID          string    `json:"id" db:"id"`
+	CompanyID   string    `json:"companyId" db:"company_id"`
 	Name        string    `json:"name" db:"name"`
 	Date        time.Time `json:"date" db:"date"`
 	Type        string    `json:"type" db:"type"` // NATIONAL, COMPANY, OPTIONAL
