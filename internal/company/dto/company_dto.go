@@ -7,7 +7,7 @@ type CreateCompanyRequest struct {
 	MaxEmployees        int      `json:"maxEmployees" validate:"omitempty,min=1"`
 	OfficeLat           *float64 `json:"officeLat" validate:"omitempty,gte=-90,lte=90"`
 	OfficeLong          *float64 `json:"officeLong" validate:"omitempty,gte=-180,lte=180"`
-	AllowedRadiusMeters *int     `json:"allowedRadiusMeters" validate:"omitempty,min=10,max=1000"`
+	AllowedRadiusMeters *int     `json:"allowedRadiusMeters,string" validate:"omitempty,min=10,max=1000"`
 }
 
 type UpdateCompanyRequest struct {
@@ -18,7 +18,7 @@ type UpdateCompanyRequest struct {
 	MaxEmployees        *int     `json:"maxEmployees" validate:"omitempty,min=1"`
 	OfficeLat           *float64 `json:"officeLat" validate:"omitempty,gte=-90,lte=90"`
 	OfficeLong          *float64 `json:"officeLong" validate:"omitempty,gte=-180,lte=180"`
-	AllowedRadiusMeters *int     `json:"allowedRadiusMeters" validate:"omitempty,min=10,max=1000"`
+	AllowedRadiusMeters *int     `json:"allowedRadiusMeters,string" validate:"omitempty,min=10,max=1000"`
 }
 
 type CompanyResponse struct {
