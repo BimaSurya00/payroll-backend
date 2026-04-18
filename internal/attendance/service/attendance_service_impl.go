@@ -216,7 +216,7 @@ func (s *attendanceService) GetHistory(ctx context.Context, userID string, page,
 	attendanceResponses := make([]*dto.AttendanceResponse, len(attendances))
 	for i, attendance := range attendances {
 		attendanceResponses[i] = helper.ToAttendanceResponse(attendance)
-		attendanceResponses[i].EmployeeName = employee.FullName
+		attendanceResponses[i].EmployeeName = getEmployeeName(employee.FullName, employee.UserName)
 	}
 
 	pagination := NewPagination(attendanceResponses, page, perPage, total, path)
@@ -245,6 +245,16 @@ func (s *attendanceService) determineStatus(clockInTime time.Time, scheduleTimeI
 	return "PRESENT"
 }
 
+func getEmployeeName(fullName string, userName *string) string {
+	if fullName != "" {
+		return fullName
+	}
+	if userName != nil && *userName != "" {
+		return *userName
+	}
+	return ""
+}
+
 func (s *attendanceService) GetAllAttendances(ctx context.Context, filter GetAllAttendanceFilter, page, perPage int, path string, companyID string) (*Pagination[*dto.AttendanceResponse], error) {
 	repoFilter := repository.AttendanceFilter{
 		EmployeeID: filter.EmployeeID,
@@ -270,25 +280,27 @@ func (s *attendanceService) GetAllAttendances(ctx context.Context, filter GetAll
 
 	attendanceResponses := make([]*dto.AttendanceResponse, len(attendances))
 
-	employeeUUIDs := make([]uuid.UUID, 0, len(attendances))
+	uniqueEmployeeIDs := make(map[string]bool)
 	for _, a := range attendances {
-		if uid, err := uuid.Parse(a.EmployeeID); err == nil {
-			employeeUUIDs = append(employeeUUIDs, uid)
-		}
+		uniqueEmployeeIDs[a.EmployeeID] = true
 	}
 
-	employeeMap := make(map[string]*employeeRepo.Employee)
-	employees, err := s.employeeRepo.FindByIDs(ctx, employeeUUIDs)
-	if err == nil {
-		for _, emp := range employees {
-			employeeMap[emp.ID.String()] = emp
+	employeeMap := make(map[string]string)
+	for empID := range uniqueEmployeeIDs {
+		uid, err := uuid.Parse(empID)
+		if err != nil {
+			continue
+		}
+		emp, err := s.employeeRepo.FindByID(ctx, uid)
+		if err == nil {
+			employeeMap[empID] = getEmployeeName(emp.FullName, emp.UserName)
 		}
 	}
 
 	for i, attendance := range attendances {
 		attendanceResponses[i] = helper.ToAttendanceResponse(attendance)
-		if emp, ok := employeeMap[attendance.EmployeeID]; ok {
-			attendanceResponses[i].EmployeeName = emp.FullName
+		if name, ok := employeeMap[attendance.EmployeeID]; ok {
+			attendanceResponses[i].EmployeeName = name
 		}
 	}
 
@@ -327,7 +339,7 @@ func (s *attendanceService) GetMonthlyReport(ctx context.Context, month, year in
 
 		item := dto.AttendanceReportItem{
 			EmployeeID:     summary.EmployeeID.String(),
-			EmployeeName:   employee.FullName,
+			EmployeeName:   getEmployeeName(employee.FullName, employee.UserName),
 			Position:       employee.Position,
 			Division:       employee.Division,
 			TotalPresent:   summary.TotalPresent,
