@@ -330,12 +330,14 @@ func (s *overtimeService) ApproveOvertimeRequest(ctx context.Context, id string,
 		return nil, fmt.Errorf("invalid approver user ID: %w", err)
 	}
 
-	approverEmployee, err := s.employeeRepo.FindByUserID(ctx, approverUserUUID)
-	if err != nil {
-		return nil, fmt.Errorf("approver employee not found: %w", err)
+	approverEmployee, _ := s.employeeRepo.FindByUserID(ctx, approverUserUUID)
+
+	var approverUUID *uuid.UUID
+	if approverEmployee != nil {
+		approverUUID = &approverEmployee.ID
 	}
 
-	if err := s.overtimeRequestRepo.UpdateStatus(ctx, requestUUID, "APPROVED", &approverEmployee.ID, nil); err != nil {
+	if err := s.overtimeRequestRepo.UpdateStatus(ctx, requestUUID, "APPROVED", approverUUID, nil); err != nil {
 		return nil, fmt.Errorf("failed to approve request: %w", err)
 	}
 
