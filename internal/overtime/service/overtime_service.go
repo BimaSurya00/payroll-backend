@@ -325,13 +325,17 @@ func (s *overtimeService) ApproveOvertimeRequest(ctx context.Context, id string,
 		return nil, ErrInvalidRequestStatus
 	}
 
-	approverUUID, err := uuid.Parse(approverID)
+	approverUserUUID, err := uuid.Parse(approverID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid approver ID: %w", err)
+		return nil, fmt.Errorf("invalid approver user ID: %w", err)
 	}
 
-	// Update request status
-	if err := s.overtimeRequestRepo.UpdateStatus(ctx, requestUUID, "APPROVED", &approverUUID, nil); err != nil {
+	approverEmployee, err := s.employeeRepo.FindByUserID(ctx, approverUserUUID)
+	if err != nil {
+		return nil, fmt.Errorf("approver employee not found: %w", err)
+	}
+
+	if err := s.overtimeRequestRepo.UpdateStatus(ctx, requestUUID, "APPROVED", &approverEmployee.ID, nil); err != nil {
 		return nil, fmt.Errorf("failed to approve request: %w", err)
 	}
 
