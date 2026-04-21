@@ -612,8 +612,8 @@ func (s *overtimeService) toOvertimeRequestResponse(request *entity.OvertimeRequ
 		EmployeeName:     userName,
 		EmployeePosition: employeePosition,
 		OvertimeDate:     request.OvertimeDate.Format("2006-01-02"),
-		StartTime:        request.StartTime,
-		EndTime:          request.EndTime,
+		StartTime:        formatTimeHHMM(request.StartTime),
+		EndTime:          formatTimeHHMM(request.EndTime),
 		TotalHours:       request.TotalHours,
 		Reason:           request.Reason,
 		OvertimePolicy: dto.OvertimePolicyDetail{
@@ -687,4 +687,14 @@ func floatValue(f *float64) float64 {
 		return 0
 	}
 	return *f
+}
+
+func formatTimeHHMM(t string) string {
+	if t == "" {
+		return ""
+	}
+	if len(t) >= 5 {
+		return t[:5]
+	}
+	return t
 }
