@@ -340,7 +340,7 @@ func (r *overtimeRequestRepository) FindByDateRange(ctx context.Context, startDa
 }
 
 func (r *overtimeRequestRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUID, companyID string) (*entity.OvertimeRequest, error) {
-	query := `SELECT o.* FROM overtime_requests o JOIN employees e ON o.employee_id = e.id WHERE o.id = $1 AND e.company_id = $2`
+	query := `SELECT o.id, o.employee_id, o.overtime_date, o.start_time, o.end_time, o.total_hours, o.reason, o.overtime_policy_id, o.status, o.approved_by, o.approved_at, o.rejection_reason, o.created_at, o.updated_at, o.company_id FROM overtime_requests o JOIN employees e ON o.employee_id = e.id WHERE o.id = $1 AND e.company_id = $2`
 
 	row := r.pool.QueryRow(ctx, query, id, companyID)
 
@@ -379,7 +379,7 @@ func (r *overtimeRequestRepository) FindAllByCompany(ctx context.Context, compan
 	var query string
 	var args []interface{}
 
-	baseQuery := `SELECT o.* FROM overtime_requests o JOIN employees e ON o.employee_id = e.id WHERE e.company_id = $1`
+	baseQuery := `SELECT o.id, o.employee_id, o.overtime_date, o.start_time, o.end_time, o.total_hours, o.reason, o.overtime_policy_id, o.status, o.approved_by, o.approved_at, o.rejection_reason, o.created_at, o.updated_at, o.company_id FROM overtime_requests o JOIN employees e ON o.employee_id = e.id WHERE e.company_id = $1`
 	whereClause := ""
 	orderClause := "ORDER BY o.created_at DESC"
 	limitClause := fmt.Sprintf("LIMIT $2 OFFSET $3")
@@ -438,7 +438,7 @@ func (r *overtimeRequestRepository) FindAllByCompany(ctx context.Context, compan
 
 func (r *overtimeRequestRepository) FindPendingByCompany(ctx context.Context, companyID string) ([]entity.OvertimeRequest, error) {
 	query := `
-		SELECT o.* FROM overtime_requests o
+		SELECT o.id, o.employee_id, o.overtime_date, o.start_time, o.end_time, o.total_hours, o.reason, o.overtime_policy_id, o.status, o.approved_by, o.approved_at, o.rejection_reason, o.created_at, o.updated_at, o.company_id FROM overtime_requests o
 		JOIN employees e ON o.employee_id = e.id
 		WHERE o.status = 'PENDING' AND e.company_id = $1
 		ORDER BY o.created_at ASC
@@ -481,7 +481,7 @@ func (r *overtimeRequestRepository) FindPendingByCompany(ctx context.Context, co
 
 func (r *overtimeRequestRepository) FindByDateRangeAndCompany(ctx context.Context, companyID string, startDate, endDate time.Time) ([]entity.OvertimeRequest, error) {
 	query := `
-		SELECT o.* FROM overtime_requests o
+		SELECT o.id, o.employee_id, o.overtime_date, o.start_time, o.end_time, o.total_hours, o.reason, o.overtime_policy_id, o.status, o.approved_by, o.approved_at, o.rejection_reason, o.created_at, o.updated_at, o.company_id FROM overtime_requests o
 		JOIN employees e ON o.employee_id = e.id
 		WHERE e.company_id = $1 AND o.overtime_date BETWEEN $2 AND $3
 		ORDER BY o.overtime_date ASC
