@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -55,11 +56,11 @@ func (r *leaveBalanceRepository) Create(ctx context.Context, balance *entity.Lea
 }
 
 func (r *leaveBalanceRepository) FindByEmployeeAndYear(ctx context.Context, employeeID uuid.UUID, year int) ([]entity.LeaveBalance, error) {
-	query := `
-		SELECT ${leaveBalanceCols} FROM leave_balances
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_balances
 		WHERE employee_id = $1 AND year = $2
 		ORDER BY leave_type_id ASC
-	`
+	`, leaveBalanceCols)
 
 	rows, err := r.pool.Query(ctx, query, employeeID, year)
 	if err != nil {
@@ -92,10 +93,10 @@ func (r *leaveBalanceRepository) FindByEmployeeAndYear(ctx context.Context, empl
 }
 
 func (r *leaveBalanceRepository) FindByEmployeeTypeAndYear(ctx context.Context, employeeID, leaveTypeID uuid.UUID, year int) (*entity.LeaveBalance, error) {
-	query := `
-		SELECT ${leaveBalanceCols} FROM leave_balances
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_balances
 		WHERE employee_id = $1 AND leave_type_id = $2 AND year = $3
-	`
+	`, leaveBalanceCols)
 
 	row := r.pool.QueryRow(ctx, query, employeeID, leaveTypeID, year)
 

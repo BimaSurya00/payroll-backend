@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,7 +67,7 @@ func (r *leaveRequestRepository) Create(ctx context.Context, request *entity.Lea
 }
 
 func (r *leaveRequestRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.LeaveRequest, error) {
-	query := `SELECT ${leaveRequestCols} FROM leave_requests WHERE id = $1`
+	query := fmt.Sprintf(`SELECT %s FROM leave_requests WHERE id = $1`, leaveRequestCols)
 
 	row := r.pool.QueryRow(ctx, query, id)
 
@@ -101,12 +102,12 @@ func (r *leaveRequestRepository) FindByID(ctx context.Context, id uuid.UUID) (*e
 }
 
 func (r *leaveRequestRepository) FindByEmployeeID(ctx context.Context, employeeID uuid.UUID, limit, offset int) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests
 		WHERE employee_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query, employeeID, limit, offset)
 	if err != nil {
@@ -145,11 +146,11 @@ func (r *leaveRequestRepository) FindByEmployeeID(ctx context.Context, employeeI
 }
 
 func (r *leaveRequestRepository) FindPending(ctx context.Context) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests
 		WHERE status = 'PENDING'
 		ORDER BY created_at ASC
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
@@ -188,8 +189,8 @@ func (r *leaveRequestRepository) FindPending(ctx context.Context) ([]entity.Leav
 }
 
 func (r *leaveRequestRepository) FindByEmployeeAndDateRange(ctx context.Context, employeeID uuid.UUID, startDate, endDate time.Time) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests
 		WHERE employee_id = $1
 		  AND status IN ('PENDING', 'APPROVED')
 		  AND (
@@ -197,7 +198,7 @@ func (r *leaveRequestRepository) FindByEmployeeAndDateRange(ctx context.Context,
 			  (start_date <= $3 AND end_date >= $3) OR
 			  (start_date >= $2 AND end_date <= $3)
 		  )
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query, employeeID, startDate, endDate)
 	if err != nil {
@@ -255,11 +256,11 @@ func (r *leaveRequestRepository) CountByEmployeeID(ctx context.Context, employee
 }
 
 func (r *leaveRequestRepository) FindAll(ctx context.Context, limit, offset int) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query, limit, offset)
 	if err != nil {
@@ -305,7 +306,7 @@ func (r *leaveRequestRepository) CountAll(ctx context.Context) (int64, error) {
 }
 
 func (r *leaveRequestRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUID, companyID string) (*entity.LeaveRequest, error) {
-	query := `SELECT ${leaveRequestCols} FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = $1 AND e.company_id = $2`
+	query := fmt.Sprintf(`SELECT %s FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = $1 AND e.company_id = $2`, leaveRequestCols)
 
 	row := r.pool.QueryRow(ctx, query, id, companyID)
 
@@ -340,13 +341,13 @@ func (r *leaveRequestRepository) FindByIDAndCompany(ctx context.Context, id uuid
 }
 
 func (r *leaveRequestRepository) FindAllByCompany(ctx context.Context, companyID string, limit, offset int) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests lr
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests lr
 		JOIN employees e ON lr.employee_id = e.id
 		WHERE e.company_id = $1
 		ORDER BY lr.created_at DESC
 		LIMIT $2 OFFSET $3
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query, companyID, limit, offset)
 	if err != nil {
@@ -392,12 +393,12 @@ func (r *leaveRequestRepository) CountAllByCompany(ctx context.Context, companyI
 }
 
 func (r *leaveRequestRepository) FindPendingByCompany(ctx context.Context, companyID string) ([]entity.LeaveRequest, error) {
-	query := `
-		SELECT ${leaveRequestCols} FROM leave_requests lr
+	query := fmt.Sprintf(`
+		SELECT %s FROM leave_requests lr
 		JOIN employees e ON lr.employee_id = e.id
 		WHERE lr.status = 'PENDING' AND e.company_id = $1
 		ORDER BY lr.created_at ASC
-	`
+	`, leaveRequestCols)
 
 	rows, err := r.pool.Query(ctx, query, companyID)
 	if err != nil {
