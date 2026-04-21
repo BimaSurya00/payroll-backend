@@ -10,6 +10,8 @@ import (
 	"hris/internal/leave/entity"
 )
 
+const leaveBalanceCols = `id, employee_id, leave_type_id, year, balance, used, pending, created_at, updated_at, company_id`
+
 var (
 	ErrLeaveBalanceNotFound = errors.New("leave balance not found")
 )
@@ -54,7 +56,7 @@ func (r *leaveBalanceRepository) Create(ctx context.Context, balance *entity.Lea
 
 func (r *leaveBalanceRepository) FindByEmployeeAndYear(ctx context.Context, employeeID uuid.UUID, year int) ([]entity.LeaveBalance, error) {
 	query := `
-		SELECT * FROM leave_balances
+		SELECT ${leaveBalanceCols} FROM leave_balances
 		WHERE employee_id = $1 AND year = $2
 		ORDER BY leave_type_id ASC
 	`
@@ -91,7 +93,7 @@ func (r *leaveBalanceRepository) FindByEmployeeAndYear(ctx context.Context, empl
 
 func (r *leaveBalanceRepository) FindByEmployeeTypeAndYear(ctx context.Context, employeeID, leaveTypeID uuid.UUID, year int) (*entity.LeaveBalance, error) {
 	query := `
-		SELECT * FROM leave_balances
+		SELECT ${leaveBalanceCols} FROM leave_balances
 		WHERE employee_id = $1 AND leave_type_id = $2 AND year = $3
 	`
 
