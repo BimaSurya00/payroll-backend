@@ -20,8 +20,8 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	// Initialize handler
 	holidayHandler := handler.NewHolidayHandler(holidayService)
 
-	// Holiday routes - ADMIN and SUPER_USER only
-	holidays := app.Group("/api/v1/holidays", jwtAuth, middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser))
+	// Holiday routes - ADMIN only
+	holidays := app.Group("/api/v1/holidays", jwtAuth, middleware.HasRole(constants.RoleAdmin))
 
 	holidays.Get("/", holidayHandler.GetAllByYear)
 	holidays.Post("/", holidayHandler.Create)

@@ -11,41 +11,15 @@ import (
 )
 
 func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber.Handler) {
-	// Initialize dependencies
 	scheduleRepo := repository.NewScheduleRepository(postgresDB.Pool)
 	scheduleService := service.NewScheduleService(scheduleRepo)
 	scheduleHandler := handler.NewScheduleHandler(scheduleService)
 
-	// Schedule routes - all require authentication
-	schedules := app.Group("/api/v1/schedules", jwtAuth)
+	schedules := app.Group("/api/v1/schedules", jwtAuth, middleware.HasRole(constants.RoleAdmin))
 
-	// Get all schedules (paginated) - SUPER_USER only (platform-level config)
-	schedules.Get("/",
-		middleware.HasRole(constants.RoleSuperUser),
-		scheduleHandler.GetAllSchedules,
-	)
-
-	// Get schedule by ID - SUPER_USER only
-	schedules.Get("/:id",
-		middleware.HasRole(constants.RoleSuperUser),
-		scheduleHandler.GetScheduleByID,
-	)
-
-	// Create schedule - SUPER_USER only
-	schedules.Post("/",
-		middleware.HasRole(constants.RoleSuperUser),
-		scheduleHandler.CreateSchedule,
-	)
-
-	// Update schedule - SUPER_USER only
-	schedules.Patch("/:id",
-		middleware.HasRole(constants.RoleSuperUser),
-		scheduleHandler.UpdateSchedule,
-	)
-
-	// Delete schedule - SUPER_USER only
-	schedules.Delete("/:id",
-		middleware.HasRole(constants.RoleSuperUser),
-		scheduleHandler.DeleteSchedule,
-	)
+	schedules.Get("/", scheduleHandler.GetAllSchedules)
+	schedules.Get("/:id", scheduleHandler.GetScheduleByID)
+	schedules.Post("/", scheduleHandler.CreateSchedule)
+	schedules.Patch("/:id", scheduleHandler.UpdateSchedule)
+	schedules.Delete("/:id", scheduleHandler.DeleteSchedule)
 }

@@ -138,3 +138,26 @@ type RecentActivitiesResponse struct {
 	Activities []RecentActivity `json:"activities"`
 	Total      int              `json:"total"`
 }
+
+// SuperUser Dashboard DTOs
+
+type SuperUserSummary struct {
+	TotalCompanies  int           `json:"totalCompanies"`
+	ActiveCompanies int           `json:"activeCompanies"`
+	TotalUsers      int           `json:"totalUsers"`
+	TotalEmployees  int           `json:"totalEmployees"`
+	TotalAdmins     int           `json:"totalAdmins"`
+	TotalSuperUsers int           `json:"totalSuperUsers"`
+	CompanyStats    []CompanyStat `json:"companyStats"`
+}
+
+type CompanyStat struct {
+	CompanyID     string `json:"companyId"`
+	CompanyName   string `json:"companyName"`
+	Plan          string `json:"plan"`
+	IsActive      bool   `json:"isActive"`
+	MaxEmployees  int    `json:"maxEmployees"`
+	UserCount     int    `json:"userCount"`
+	EmployeeCount int    `json:"employeeCount"`
+	CreatedAt     string `json:"createdAt"`
+}

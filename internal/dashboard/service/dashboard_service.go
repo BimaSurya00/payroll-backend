@@ -16,6 +16,7 @@ type DashboardService interface {
 	GetPayrollStats(ctx context.Context, companyID string, month, year int) (*dto.PayrollStats, error)
 	GetEmployeeStats(ctx context.Context, companyID string) (*dto.EmployeeStats, error)
 	GetRecentActivities(ctx context.Context, companyID string, limit int) (*dto.RecentActivitiesResponse, error)
+	GetSuperUserSummary(ctx context.Context) (*dto.SuperUserSummary, error)
 }
 
 type dashboardService struct {
@@ -460,4 +461,75 @@ func (s *dashboardService) GetRecentActivities(ctx context.Context, companyID st
 		Activities: activities,
 		Total:      total,
 	}, nil
+}
+
+func (s *dashboardService) GetSuperUserSummary(ctx context.Context) (*dto.SuperUserSummary, error) {
+	summary := dto.SuperUserSummary{}
+
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COALESCE(SUM(CASE WHEN is_active THEN 1 ELSE 0 END), 0)
+		FROM companies
+	`).Scan(&summary.TotalCompanies, &summary.ActiveCompanies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query company summary: %w", err)
+	}
+
+	err = s.pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COALESCE(SUM(CASE WHEN role = 'ADMIN' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN role = 'SUPER_USER' THEN 1 ELSE 0 END), 0)
+		FROM users
+	`).Scan(&summary.TotalUsers, &summary.TotalAdmins, &summary.TotalSuperUsers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query user summary: %w", err)
+	}
+
+	err = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL`).Scan(&summary.TotalEmployees)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query employee summary: %w", err)
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			c.id,
+			c.name,
+			c.plan,
+			c.is_active,
+			c.max_employees,
+			c.created_at,
+			(SELECT COUNT(*) FROM users WHERE company_id = c.id) as user_count,
+			(SELECT COUNT(*) FROM employees WHERE company_id = c.id AND deleted_at IS NULL) as employee_count
+		FROM companies c
+		ORDER BY c.created_at DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query company stats: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var stat dto.CompanyStat
+		var createdAt time.Time
+		err := rows.Scan(
+			&stat.CompanyID,
+			&stat.CompanyName,
+			&stat.Plan,
+			&stat.IsActive,
+			&stat.MaxEmployees,
+			&createdAt,
+			&stat.UserCount,
+			&stat.EmployeeCount,
+		)
+		if err != nil {
+			continue
+		}
+		stat.CreatedAt = createdAt.Format("2006-01-02")
+		summary.CompanyStats = append(summary.CompanyStats, stat)
+	}
+
+	return &summary, nil
 }

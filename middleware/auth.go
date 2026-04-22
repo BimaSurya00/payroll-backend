@@ -45,18 +45,12 @@ func JWTAuth(jwtCfg *config.JWTConfig) fiber.Handler {
 }
 
 // HasRole checks if the user has one of the required roles
-// SUPER_USER automatically has access to everything
 func HasRole(requiredRoles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get user role from context (set by JWTAuth middleware)
 		userRole, ok := c.Locals(constants.ContextKeyUserRole).(string)
 		if !ok {
 			return sharedHelper.ErrorResponse(c, fiber.StatusUnauthorized, "User role not found in context", nil)
-		}
-
-		// SUPER_USER has access to everything (best practice)
-		if userRole == constants.RoleSuperUser {
-			return c.Next()
 		}
 
 		// Check if user's role is in the required roles

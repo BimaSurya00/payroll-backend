@@ -2,10 +2,10 @@ package payroll
 
 import (
 	"github.com/gofiber/fiber/v2"
-	auditrepository "hris/internal/audit/repository"
-	auditservice "hris/internal/audit/service"
 	"hris/database"
 	attendancerepository "hris/internal/attendance/repository"
+	auditrepository "hris/internal/audit/repository"
+	auditservice "hris/internal/audit/service"
 	employeerepository "hris/internal/employee/repository"
 	"hris/internal/payroll/handler"
 	payrollrepository "hris/internal/payroll/repository"
@@ -37,8 +37,8 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	api.Get("/my", payrollHandler.GetMyPayrolls)
 	api.Get("/my/:id", payrollHandler.GetMyPayrollByID)
 
-	// Admin only routes - ADMIN and SUPER_USER only
-	admin := api.Group("", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser))
+	// Admin only routes - ADMIN only
+	admin := api.Group("", middleware.HasRole(constants.RoleAdmin))
 
 	admin.Post("/generate", middleware.PayrollRateLimiter(rateLimiterStorage), payrollHandler.GenerateBulk)
 	admin.Get("/", payrollHandler.GetAllPayrolls)

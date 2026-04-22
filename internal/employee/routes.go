@@ -23,41 +23,41 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 
 	// Self-service routes — ALL authenticated users (must be before /:id)
 	employees.Get("/me",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
 		employeeHandler.GetMyProfile,
 	)
 	employees.Patch("/me",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
 		employeeHandler.UpdateMyProfile,
 	)
 
-	// Create employee - ADMIN and SUPER_USER only
+	// Create employee - ADMIN only
 	employees.Post("/",
-		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleAdmin),
 		employeeHandler.CreateEmployee,
 	)
 
-	// Get all employees (paginated) - ADMIN and SUPER_USER only
+	// Get all employees (paginated) - ADMIN only
 	employees.Get("/",
-		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleAdmin),
 		employeeHandler.GetAllEmployees,
 	)
 
-	// Get employee by ID - ADMIN and SUPER_USER only
+	// Get employee by ID - ADMIN only
 	employees.Get("/:id",
-		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleAdmin),
 		employeeHandler.GetEmployeeByID,
 	)
 
-	// Update employee - ADMIN and SUPER_USER only
+	// Update employee - ADMIN only
 	employees.Patch("/:id",
-		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleAdmin),
 		employeeHandler.UpdateEmployee,
 	)
 
-	// Delete employee - ADMIN and SUPER_USER only
+	// Delete employee - ADMIN only
 	employees.Delete("/:id",
-		middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser),
+		middleware.HasRole(constants.RoleAdmin),
 		employeeHandler.DeleteEmployee,
 	)
 }

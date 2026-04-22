@@ -22,8 +22,8 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	// Initialize handler
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
 
-	// Department routes - ADMIN and SUPER_USER only
-	departments := app.Group("/api/v1/departments", jwtAuth, middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser))
+	// Department routes - ADMIN only
+	departments := app.Group("/api/v1/departments", jwtAuth, middleware.HasRole(constants.RoleAdmin))
 
 	departments.Get("/", departmentHandler.GetAll)
 	departments.Post("/", departmentHandler.Create)

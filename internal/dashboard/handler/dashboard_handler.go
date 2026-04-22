@@ -115,3 +115,12 @@ func (h *DashboardHandler) GetRecentActivities(c *fiber.Ctx) error {
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "Recent activities retrieved", activities)
 }
+
+func (h *DashboardHandler) GetSuperUserSummary(c *fiber.Ctx) error {
+	summary, err := h.service.GetSuperUserSummary(c.Context())
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get superuser dashboard", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Superuser dashboard retrieved", summary)
+}

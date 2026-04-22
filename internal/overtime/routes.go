@@ -31,10 +31,10 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 
 	// ========== OVERTIME REQUESTS (All authenticated users) ==========
 	// IMPORTANT: More specific routes must come before parameterized routes
-	overtime.Get("/requests", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), overtimeHandler.GetAllOvertimeRequests)
+	overtime.Get("/requests", middleware.HasRole(constants.RoleAdmin), overtimeHandler.GetAllOvertimeRequests)
 	overtime.Post("/requests", overtimeHandler.CreateOvertimeRequest)
 	overtime.Get("/requests/my", overtimeHandler.GetMyOvertimeRequests)
-	overtime.Get("/requests/pending", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), overtimeHandler.GetPendingOvertimeRequests) // Must be before /:id
+	overtime.Get("/requests/pending", middleware.HasRole(constants.RoleAdmin), overtimeHandler.GetPendingOvertimeRequests) // Must be before /:id
 	overtime.Get("/requests/:id", overtimeHandler.GetOvertimeRequestByID)
 	overtime.Get("/policies", overtimeHandler.GetActivePolicies)
 
@@ -42,10 +42,10 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	overtime.Post("/requests/:id/clock-in", overtimeHandler.ClockIn)
 	overtime.Post("/requests/:id/clock-out", overtimeHandler.ClockOut)
 
-	// ========== OVERTIME APPROVALS (Admin & Super User only) ==========
-	overtime.Put("/requests/:id/approve", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), overtimeHandler.ApproveOvertimeRequest)
-	overtime.Put("/requests/:id/reject", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), overtimeHandler.RejectOvertimeRequest)
+	// ========== OVERTIME APPROVALS (ADMIN only) ==========
+	overtime.Put("/requests/:id/approve", middleware.HasRole(constants.RoleAdmin), overtimeHandler.ApproveOvertimeRequest)
+	overtime.Put("/requests/:id/reject", middleware.HasRole(constants.RoleAdmin), overtimeHandler.RejectOvertimeRequest)
 
-	// ========== OVERTIME CALCULATION (Admin & Payroll access) ==========
-	overtime.Get("/calculation/:employeeId", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), overtimeHandler.CalculateOvertimePay)
+	// ========== OVERTIME CALCULATION (ADMIN only) ==========
+	overtime.Get("/calculation/:employeeId", middleware.HasRole(constants.RoleAdmin), overtimeHandler.CalculateOvertimePay)
 }

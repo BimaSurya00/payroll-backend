@@ -13,11 +13,15 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	dashboardService := service.NewDashboardService(postgresDB.Pool)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 
-	// Dashboard routes - ADMIN and SUPER_USER only
-	dash := app.Group("/api/v1/dashboard", jwtAuth, middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser))
+	// Dashboard routes - ADMIN only
+	dash := app.Group("/api/v1/dashboard", jwtAuth, middleware.HasRole(constants.RoleAdmin))
 	dash.Get("/summary", dashboardHandler.GetSummary)
 	dash.Get("/attendance-stats", dashboardHandler.GetAttendanceStats)
 	dash.Get("/payroll-stats", dashboardHandler.GetPayrollStats)
 	dash.Get("/employee-stats", dashboardHandler.GetEmployeeStats)
 	dash.Get("/recent-activities", dashboardHandler.GetRecentActivities)
+
+	// Superuser dashboard - SUPER_USER only
+	superDash := app.Group("/api/v1/dashboard/super", jwtAuth, middleware.HasRole(constants.RoleSuperUser))
+	superDash.Get("/summary", dashboardHandler.GetSuperUserSummary)
 }

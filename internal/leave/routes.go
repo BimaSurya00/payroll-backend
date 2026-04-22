@@ -39,24 +39,24 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	// Leave routes - all require authentication
 	leave := app.Group("/api/v1/leave", jwtAuth)
 
-	// ========== LEAVE TYPES (All authenticated users) ==========
+	// ========== LEAVE TYPES ==========
 	leave.Get("/types", leaveTypeHandler.GetActiveLeaveTypes)
-	leave.Get("/types/all", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveTypeHandler.GetAllLeaveTypes)
-	leave.Get("/types/:id", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveTypeHandler.GetLeaveTypeByID)
-	leave.Post("/types", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveTypeHandler.CreateLeaveType)
-	leave.Put("/types/:id", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveTypeHandler.UpdateLeaveType)
-	leave.Delete("/types/:id", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveTypeHandler.DeleteLeaveType)
+	leave.Get("/types/all", middleware.HasRole(constants.RoleAdmin), leaveTypeHandler.GetAllLeaveTypes)
+	leave.Get("/types/:id", middleware.HasRole(constants.RoleAdmin), leaveTypeHandler.GetLeaveTypeByID)
+	leave.Post("/types", middleware.HasRole(constants.RoleAdmin), leaveTypeHandler.CreateLeaveType)
+	leave.Put("/types/:id", middleware.HasRole(constants.RoleAdmin), leaveTypeHandler.UpdateLeaveType)
+	leave.Delete("/types/:id", middleware.HasRole(constants.RoleAdmin), leaveTypeHandler.DeleteLeaveType)
 
 	// ========== LEAVE REQUESTS (All authenticated users) ==========
 	leave.Post("/requests", leaveRequestHandler.CreateLeaveRequest)
 	leave.Get("/requests/my", leaveRequestHandler.GetMyLeaveRequests)
 	leave.Get("/balances/my", leaveRequestHandler.GetMyLeaveBalances)
 
-	// ========== LEAVE APPROVALS (Admin & Super User only) ==========
+	// ========== LEAVE APPROVALS (ADMIN only) ==========
 	// IMPORTANT: Specific routes must be defined BEFORE parameterized routes
-	leave.Get("/requests/pending", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveRequestHandler.GetPendingLeaveRequests)
-	leave.Get("/requests", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveRequestHandler.GetAllLeaveRequests)
+	leave.Get("/requests/pending", middleware.HasRole(constants.RoleAdmin), leaveRequestHandler.GetPendingLeaveRequests)
+	leave.Get("/requests", middleware.HasRole(constants.RoleAdmin), leaveRequestHandler.GetAllLeaveRequests)
 	leave.Get("/requests/:id", leaveRequestHandler.GetLeaveRequestByID)
-	leave.Put("/requests/:id/approve", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveRequestHandler.ApproveLeaveRequest)
-	leave.Put("/requests/:id/reject", middleware.HasRole(constants.RoleAdmin, constants.RoleSuperUser), leaveRequestHandler.RejectLeaveRequest)
+	leave.Put("/requests/:id/approve", middleware.HasRole(constants.RoleAdmin), leaveRequestHandler.ApproveLeaveRequest)
+	leave.Put("/requests/:id/reject", middleware.HasRole(constants.RoleAdmin), leaveRequestHandler.RejectLeaveRequest)
 }
