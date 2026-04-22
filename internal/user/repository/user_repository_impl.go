@@ -28,10 +28,14 @@ const userColumns = `id, company_id, name, email, password, role, is_active, pro
 func scanUser(row pgx.Row) (*entity.User, error) {
 	var u entity.User
 	var profileImageUrl *string
+	var companyID *string
 	err := row.Scan(
-		&u.ID, &u.CompanyID, &u.Name, &u.Email, &u.Password,
+		&u.ID, &companyID, &u.Name, &u.Email, &u.Password,
 		&u.Role, &u.IsActive, &profileImageUrl, &u.CreatedAt, &u.UpdatedAt,
 	)
+	if companyID != nil {
+		u.CompanyID = *companyID
+	}
 	if profileImageUrl != nil {
 		u.ProfileImageUrl = *profileImageUrl
 	}
@@ -46,9 +50,13 @@ func (r *repository) Create(ctx context.Context, user *entity.User) error {
 	if user.ProfileImageUrl != "" {
 		profileUrl = &user.ProfileImageUrl
 	}
+	var companyID *string
+	if user.CompanyID != "" {
+		companyID = &user.CompanyID
+	}
 
 	_, err := r.pool.Exec(ctx, query,
-		user.ID, user.CompanyID, user.Name, user.Email, user.Password,
+		user.ID, companyID, user.Name, user.Email, user.Password,
 		user.Role, user.IsActive, profileUrl, now, now,
 	)
 	if err != nil {
@@ -96,11 +104,15 @@ func (r *repository) FindAll(ctx context.Context, skip, limit int64) ([]*entity.
 	for rows.Next() {
 		var u entity.User
 		var profileImageUrl *string
+		var companyID *string
 		if err := rows.Scan(
-			&u.ID, &u.CompanyID, &u.Name, &u.Email, &u.Password,
+			&u.ID, &companyID, &u.Name, &u.Email, &u.Password,
 			&u.Role, &u.IsActive, &profileImageUrl, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		if companyID != nil {
+			u.CompanyID = *companyID
 		}
 		if profileImageUrl != nil {
 			u.ProfileImageUrl = *profileImageUrl
@@ -129,10 +141,14 @@ func (r *repository) Update(ctx context.Context, user *entity.User) error {
 	if user.ProfileImageUrl != "" {
 		profileUrl = &user.ProfileImageUrl
 	}
+	var companyID *string
+	if user.CompanyID != "" {
+		companyID = &user.CompanyID
+	}
 
 	result, err := r.pool.Exec(ctx, query,
 		user.Name, user.Email, user.Password, user.Role,
-		user.IsActive, profileUrl, user.CompanyID, time.Now(), user.ID,
+		user.IsActive, profileUrl, companyID, time.Now(), user.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
@@ -173,11 +189,15 @@ func (r *repository) FindByIDs(ctx context.Context, ids []string) ([]*entity.Use
 	for rows.Next() {
 		var u entity.User
 		var profileImageUrl *string
+		var companyID *string
 		if err := rows.Scan(
-			&u.ID, &u.CompanyID, &u.Name, &u.Email, &u.Password,
+			&u.ID, &companyID, &u.Name, &u.Email, &u.Password,
 			&u.Role, &u.IsActive, &profileImageUrl, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		if companyID != nil {
+			u.CompanyID = *companyID
 		}
 		if profileImageUrl != nil {
 			u.ProfileImageUrl = *profileImageUrl
@@ -202,11 +222,15 @@ func (r *repository) FindAllByCompany(ctx context.Context, companyID string, ski
 	for rows.Next() {
 		var u entity.User
 		var profileImageUrl *string
+		var companyID *string
 		if err := rows.Scan(
-			&u.ID, &u.CompanyID, &u.Name, &u.Email, &u.Password,
+			&u.ID, &companyID, &u.Name, &u.Email, &u.Password,
 			&u.Role, &u.IsActive, &profileImageUrl, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		if companyID != nil {
+			u.CompanyID = *companyID
 		}
 		if profileImageUrl != nil {
 			u.ProfileImageUrl = *profileImageUrl

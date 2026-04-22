@@ -37,19 +37,17 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return helper.ValidationErrorResponse(c, validationErrors)
 	}
 
-	// Get company_id from context (set by JWTAuth middleware)
 	companyID, ok := c.Locals(constants.ContextKeyCompanyID).(string)
-	if !ok || companyID == "" {
-		return helper.ErrorResponse(c, fiber.StatusForbidden, "Company context not found", nil)
-	}
-
-	// Get user role from context
 	userRole, _ := c.Locals(constants.ContextKeyUserRole).(string)
 
-	// For SUPER_USER, allow creating user for specific company
-	if userRole == constants.RoleSuperUser && req.CompanyID != nil && *req.CompanyID != "" {
-		// Use company_id from request if super admin specified it
-		companyID = *req.CompanyID
+	if userRole == constants.RoleSuperUser {
+		if req.CompanyID != nil && *req.CompanyID != "" {
+			companyID = *req.CompanyID
+		} else {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, "Company ID is required when creating user", nil)
+		}
+	} else if !ok || companyID == "" {
+		return helper.ErrorResponse(c, fiber.StatusForbidden, "Company context not found", nil)
 	}
 
 	user, err := h.service.CreateUser(c.Context(), &req, companyID)
