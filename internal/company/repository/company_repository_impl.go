@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"hris/internal/company/dto"
 	"hris/internal/company/entity"
 )
 
@@ -125,4 +126,83 @@ func (r *companyRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM companies WHERE id = $1`
 	_, err := r.pool.Exec(ctx, query, id)
 	return err
+}
+
+func (r *companyRepository) FindAllWithStats(ctx context.Context, page, perPage int) ([]*dto.CompanyListItem, int64, error) {
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM companies`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * perPage
+	query := `
+		SELECT c.id, c.name, c.slug, c.is_active, c.plan, c.max_employees, c.created_at,
+			COALESCE((SELECT COUNT(*) FROM users WHERE company_id = c.id), 0),
+			COALESCE((SELECT COUNT(*) FROM employees WHERE company_id = c.id AND deleted_at IS NULL), 0)
+		FROM companies c
+		ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`
+
+	rows, err := r.pool.Query(ctx, query, perPage, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var items []*dto.CompanyListItem
+	for rows.Next() {
+		var item dto.CompanyListItem
+		var createdAt time.Time
+		if err := rows.Scan(
+			&item.ID, &item.Name, &item.Slug, &item.IsActive,
+			&item.Plan, &item.MaxEmployees, &createdAt,
+			&item.UserCount, &item.EmployeeCount,
+		); err != nil {
+			return nil, 0, err
+		}
+		item.CreatedAt = createdAt.Format("2006-01-02")
+		items = append(items, &item)
+	}
+
+	return items, total, nil
+}
+
+func (r *companyRepository) GetStats(ctx context.Context, companyID string) (*dto.CompanyStatsResponse, error) {
+	var c entity.Company
+	if err := r.pool.QueryRow(ctx,
+		`SELECT id, name, slug, is_active, plan, max_employees,
+			office_lat, office_long, allowed_radius_meters, created_at, updated_at
+		FROM companies WHERE id = $1`, companyID,
+	).Scan(
+		&c.ID, &c.Name, &c.Slug, &c.IsActive,
+		&c.Plan, &c.MaxEmployees, &c.OfficeLat, &c.OfficeLong,
+		&c.AllowedRadiusMeters, &c.CreatedAt, &c.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrCompanyNotFound
+		}
+		return nil, err
+	}
+
+	stats := &dto.CompanyStatsResponse{
+		CompanyID:   c.ID,
+		CompanyName: c.Name,
+	}
+
+	queries := []struct {
+		sql  string
+		dest *int
+	}{
+		{`SELECT COUNT(*) FROM users WHERE company_id = $1`, &stats.UserCount},
+		{`SELECT COUNT(*) FROM employees WHERE company_id = $1 AND deleted_at IS NULL`, &stats.EmployeeCount},
+		{`SELECT COUNT(*) FROM departments WHERE company_id = $1`, &stats.DepartmentCount},
+		{`SELECT COUNT(*) FROM schedules WHERE company_id = $1`, &stats.ScheduleCount},
+	}
+
+	for _, q := range queries {
+		if err := r.pool.QueryRow(ctx, q.sql, companyID).Scan(q.dest); err != nil {
+			*q.dest = 0
+		}
+	}
+
+	return stats, nil
 }

@@ -139,6 +139,12 @@ func (r *auditRepository) FindAll(ctx context.Context, filter AuditFilter, limit
 		argNum++
 	}
 
+	if filter.CompanyID != nil {
+		query += fmt.Sprintf(` AND company_id = $%d`, argNum)
+		args = append(args, *filter.CompanyID)
+		argNum++
+	}
+
 	if filter.DateFrom != nil {
 		query += fmt.Sprintf(` AND created_at >= $%d`, argNum)
 		args = append(args, *filter.DateFrom)
@@ -205,6 +211,12 @@ func (r *auditRepository) Count(ctx context.Context, filter AuditFilter) (int64,
 	if filter.ResourceType != nil {
 		query += fmt.Sprintf(` AND resource_type = $%d`, argNum)
 		args = append(args, *filter.ResourceType)
+		argNum++
+	}
+
+	if filter.CompanyID != nil {
+		query += fmt.Sprintf(` AND company_id = $%d`, argNum)
+		args = append(args, *filter.CompanyID)
 		argNum++
 	}
 

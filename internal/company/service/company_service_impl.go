@@ -79,6 +79,14 @@ func (s *companyServiceImpl) GetAll(ctx context.Context, page, perPage int) ([]*
 	return s.companyRepo.FindAll(ctx, page, perPage)
 }
 
+func (s *companyServiceImpl) GetAllWithStats(ctx context.Context, page, perPage int) ([]*dto.CompanyListItem, int64, error) {
+	return s.companyRepo.FindAllWithStats(ctx, page, perPage)
+}
+
+func (s *companyServiceImpl) GetStats(ctx context.Context, id string) (*dto.CompanyStatsResponse, error) {
+	return s.companyRepo.GetStats(ctx, id)
+}
+
 func (s *companyServiceImpl) Update(ctx context.Context, id string, req *dto.UpdateCompanyRequest) (*entity.Company, error) {
 	company, err := s.companyRepo.FindByID(ctx, id)
 	if err != nil {

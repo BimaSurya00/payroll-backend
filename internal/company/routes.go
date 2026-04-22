@@ -31,7 +31,8 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	adminApi := publicApi.Group("/")
 	adminApi.Use(middleware.HasRole(constants.RoleSuperUser))
 	adminApi.Post("/", companyHandler.Create)
-	adminApi.Get("/", companyHandler.GetAll)
+	adminApi.Get("/", companyHandler.GetAllWithStats)
 	adminApi.Put("/:id", companyHandler.Update)
 	adminApi.Delete("/:id", companyHandler.Delete)
+	adminApi.Get("/:id/stats", companyHandler.GetStats)
 }

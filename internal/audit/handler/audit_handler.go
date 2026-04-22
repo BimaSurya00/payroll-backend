@@ -52,6 +52,10 @@ func (h *auditHandler) GetAll(c *fiber.Ctx) error {
 		filter.UserID = &userID
 	}
 
+	if companyID := c.Query("company_id"); companyID != "" {
+		filter.CompanyID = &companyID
+	}
+
 	if dateFrom := c.Query("date_from"); dateFrom != "" {
 		t, err := time.Parse("2006-01-02", dateFrom)
 		if err == nil {

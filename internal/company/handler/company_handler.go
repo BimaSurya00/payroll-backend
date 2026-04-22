@@ -143,3 +143,48 @@ func (h *CompanyHandler) Delete(c *fiber.Ctx) error {
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "Company deleted successfully", nil)
 }
+
+func (h *CompanyHandler) GetStats(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Company ID is required", nil)
+	}
+
+	stats, err := h.service.GetStats(c.Context(), id)
+	if err != nil {
+		if err == service.ErrCompanyNotFound {
+			return helper.ErrorResponse(c, fiber.StatusNotFound, err.Error(), nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get company stats", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Company stats retrieved", stats)
+}
+
+func (h *CompanyHandler) GetAllWithStats(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", strconv.Itoa(constants.DefaultPage)))
+	perPage, _ := strconv.Atoi(c.Query("per_page", strconv.Itoa(constants.DefaultPerPage)))
+
+	if page < 1 {
+		page = constants.DefaultPage
+	}
+	if perPage < 1 || perPage > constants.MaxPerPage {
+		perPage = constants.DefaultPerPage
+	}
+
+	companies, total, err := h.service.GetAllWithStats(c.Context(), page, perPage)
+	if err != nil {
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get companies", err.Error())
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": "Companies retrieved",
+		"data":    companies,
+		"meta": fiber.Map{
+			"page":    page,
+			"perPage": perPage,
+			"total":   total,
+		},
+	})
+}

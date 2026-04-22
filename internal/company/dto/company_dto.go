@@ -34,3 +34,24 @@ type CompanyResponse struct {
 	CreatedAt           string   `json:"createdAt"`
 	UpdatedAt           string   `json:"updatedAt"`
 }
+
+type CompanyListItem struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Slug          string `json:"slug"`
+	IsActive      bool   `json:"isActive"`
+	Plan          string `json:"plan"`
+	MaxEmployees  int    `json:"maxEmployees"`
+	UserCount     int    `json:"userCount"`
+	EmployeeCount int    `json:"employeeCount"`
+	CreatedAt     string `json:"createdAt"`
+}
+
+type CompanyStatsResponse struct {
+	CompanyID       string `json:"companyId"`
+	CompanyName     string `json:"companyName"`
+	UserCount       int    `json:"userCount"`
+	EmployeeCount   int    `json:"employeeCount"`
+	DepartmentCount int    `json:"departmentCount"`
+	ScheduleCount   int    `json:"scheduleCount"`
+}

@@ -19,6 +19,7 @@ type AuditFilter struct {
 	UserID       *string
 	Action       *string
 	ResourceType *string
+	CompanyID    *string
 	DateFrom     *time.Time
 	DateTo       *time.Time
 }
