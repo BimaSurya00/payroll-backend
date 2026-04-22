@@ -17,6 +17,7 @@ var (
 )
 
 const leaveRequestCols = `id, employee_id, leave_type_id, start_date, end_date, total_days, reason, attachment_url, emergency_contact, status, approved_by, approved_at, rejection_reason, created_at, updated_at, company_id`
+const leaveRequestColsLr = `lr.id, lr.employee_id, lr.leave_type_id, lr.start_date, lr.end_date, lr.total_days, lr.reason, lr.attachment_url, lr.emergency_contact, lr.status, lr.approved_by, lr.approved_at, lr.rejection_reason, lr.created_at, lr.updated_at, lr.company_id`
 
 type LeaveRequestRepository interface {
 	Create(ctx context.Context, request *entity.LeaveRequest) error
@@ -306,7 +307,7 @@ func (r *leaveRequestRepository) CountAll(ctx context.Context) (int64, error) {
 }
 
 func (r *leaveRequestRepository) FindByIDAndCompany(ctx context.Context, id uuid.UUID, companyID string) (*entity.LeaveRequest, error) {
-	query := fmt.Sprintf(`SELECT %s FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = $1 AND e.company_id = $2`, leaveRequestCols)
+	query := fmt.Sprintf(`SELECT %s FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = $1 AND e.company_id = $2`, leaveRequestColsLr)
 
 	row := r.pool.QueryRow(ctx, query, id, companyID)
 
@@ -347,7 +348,7 @@ func (r *leaveRequestRepository) FindAllByCompany(ctx context.Context, companyID
 		WHERE e.company_id = $1
 		ORDER BY lr.created_at DESC
 		LIMIT $2 OFFSET $3
-	`, leaveRequestCols)
+	`, leaveRequestColsLr)
 
 	rows, err := r.pool.Query(ctx, query, companyID, limit, offset)
 	if err != nil {
@@ -398,7 +399,7 @@ func (r *leaveRequestRepository) FindPendingByCompany(ctx context.Context, compa
 		JOIN employees e ON lr.employee_id = e.id
 		WHERE lr.status = 'PENDING' AND e.company_id = $1
 		ORDER BY lr.created_at ASC
-	`, leaveRequestCols)
+	`, leaveRequestColsLr)
 
 	rows, err := r.pool.Query(ctx, query, companyID)
 	if err != nil {
