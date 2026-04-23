@@ -13,10 +13,9 @@ func RegisterRoutes(app *fiber.App, postgresDB *database.Postgres, jwtAuth fiber
 	dashboardService := service.NewDashboardService(postgresDB.Pool)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 
-	// Superuser dashboard - MUST be registered BEFORE admin dashboard
-	// because both share the /api/v1/dashboard prefix
-	superDash := app.Group("/api/v1/dashboard/super", jwtAuth, middleware.HasRole(constants.RoleSuperUser))
-	superDash.Get("/summary", dashboardHandler.GetSuperUserSummary)
+	// Platform routes - SUPER_USER only (separate prefix to avoid Fiber trie collision)
+	platform := app.Group("/api/v1/platform", jwtAuth, middleware.HasRole(constants.RoleSuperUser))
+	platform.Get("/summary", dashboardHandler.GetSuperUserSummary)
 
 	// Admin dashboard routes
 	dash := app.Group("/api/v1/dashboard", jwtAuth, middleware.HasRole(constants.RoleAdmin))
