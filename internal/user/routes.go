@@ -39,13 +39,13 @@ func registerUserRoutes(app *fiber.App, userHandler *handler.UserHandler, jwtAut
 	// User routes - all require authentication
 	users := app.Group("/api/v1/users", jwtAuth)
 
-	// Get own profile - accessible by USER and ADMIN
+	// Self-service routes — ALL authenticated roles
 	users.Get("/me",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
 		userHandler.GetOwnProfile,
 	)
 
-	// Create user - SUPER_USER only (platform-level user management)
+	// Create user - SUPER_USER only
 	users.Post("/",
 		middleware.HasRole(constants.RoleSuperUser),
 		userHandler.CreateUser,
@@ -75,22 +75,19 @@ func registerUserRoutes(app *fiber.App, userHandler *handler.UserHandler, jwtAut
 		userHandler.DeleteUser,
 	)
 
-	// Profile Image Routes
-	// Upload profile image - USER and ADMIN
+	// Profile Image Routes - ALL authenticated roles
 	users.Post("/:id/profile-image",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
 		userHandler.UploadProfileImage,
 	)
 
-	// Update profile image - USER and ADMIN
 	users.Put("/:id/profile-image",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
 		userHandler.UpdateProfileImage,
 	)
 
-	// Delete profile image - USER and ADMIN
 	users.Delete("/:id/profile-image",
-		middleware.HasRole(constants.RoleUser, constants.RoleAdmin),
+		middleware.HasRole(constants.RoleUser, constants.RoleAdmin, constants.RoleSuperUser),
 		userHandler.DeleteProfileImage,
 	)
 }
