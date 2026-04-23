@@ -147,3 +147,53 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 
 	return helper.SuccessResponse(c, fiber.StatusOK, "Password changed successfully. Please login again.", nil)
 }
+
+func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
+	var req dto.ForgotPasswordRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body", err.Error())
+	}
+
+	if validationErrors := customValidator.ValidateStruct(&req); len(validationErrors) > 0 {
+		return helper.ValidationErrorResponse(c, validationErrors)
+	}
+
+	token, err := h.service.ForgotPassword(c.Context(), req.Email)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) || errors.Is(err, service.ErrAccountDeactivated) {
+			return helper.SuccessResponse(c, fiber.StatusOK, "If an account with that email exists, a reset token has been generated.", nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to process request", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Reset token generated successfully", fiber.Map{
+		"token":   token,
+		"message": "Use this token to reset your password. In production, this would be sent via email.",
+	})
+}
+
+func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
+	var req dto.ResetPasswordRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return helper.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body", err.Error())
+	}
+
+	if validationErrors := customValidator.ValidateStruct(&req); len(validationErrors) > 0 {
+		return helper.ValidationErrorResponse(c, validationErrors)
+	}
+
+	err := h.service.ResetPassword(c.Context(), req.Token, req.NewPassword)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidResetToken) {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, "Invalid or expired reset token", nil)
+		}
+		if errors.Is(err, service.ErrUserNotFound) {
+			return helper.ErrorResponse(c, fiber.StatusBadRequest, "User not found", nil)
+		}
+		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to reset password", err.Error())
+	}
+
+	return helper.SuccessResponse(c, fiber.StatusOK, "Password reset successfully. Please login with your new password.", nil)
+}

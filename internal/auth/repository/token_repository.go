@@ -17,6 +17,9 @@ type TokenRepository interface {
 	DeleteRefreshToken(ctx context.Context, userID, tokenID string) error
 	DeleteAllUserRefreshTokens(ctx context.Context, userID string) error
 	RefreshTokenExists(ctx context.Context, userID, tokenID string) (bool, error)
+	SetResetToken(ctx context.Context, token string, userID string, expiresAt time.Time) error
+	GetResetToken(ctx context.Context, token string) (string, error)
+	DeleteResetToken(ctx context.Context, token string) error
 }
 
 type tokenRepository struct {
@@ -99,4 +102,28 @@ func (r *tokenRepository) RefreshTokenExists(ctx context.Context, userID, tokenI
 
 func (r *tokenRepository) buildRefreshTokenKey(userID, tokenID string) string {
 	return fmt.Sprintf(constants.CacheKeyRefreshTokenPrefix, userID, tokenID)
+}
+
+func (r *tokenRepository) SetResetToken(ctx context.Context, token, userID string, expiresAt time.Time) error {
+	key := fmt.Sprintf("reset_token:%s", token)
+	data := fmt.Sprintf(`{"user_id":"%s"}`, userID)
+	ttl := time.Until(expiresAt)
+	if ttl <= 0 {
+		return fmt.Errorf("token expiration time is in the past")
+	}
+	return r.keydb.Set(ctx, key, data, ttl)
+}
+
+func (r *tokenRepository) GetResetToken(ctx context.Context, token string) (string, error) {
+	key := fmt.Sprintf("reset_token:%s", token)
+	data, err := r.keydb.Get(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("reset token not found or expired")
+	}
+	return data, nil
+}
+
+func (r *tokenRepository) DeleteResetToken(ctx context.Context, token string) error {
+	key := fmt.Sprintf("reset_token:%s", token)
+	return r.keydb.Del(ctx, key)
 }

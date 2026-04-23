@@ -32,6 +32,8 @@ func RegisterRoutes(
 	auth.Post("/register", middleware.AuthRateLimiter(rateLimiterStorage), authHandler.Register)
 	auth.Post("/login", middleware.AuthRateLimiter(rateLimiterStorage), authHandler.Login)
 	auth.Post("/refresh", middleware.AuthRateLimiter(rateLimiterStorage), authHandler.RefreshToken)
+	auth.Post("/forgot-password", middleware.AuthRateLimiter(rateLimiterStorage), authHandler.ForgotPassword)
+	auth.Post("/reset-password", middleware.AuthRateLimiter(rateLimiterStorage), authHandler.ResetPassword)
 
 	// Protected routes
 	auth.Post("/logout", jwtAuth, authHandler.Logout)

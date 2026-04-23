@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"hris/config"
 	"hris/internal/auth/dto"
 	"hris/internal/auth/helper"
@@ -24,6 +26,8 @@ var (
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 	ErrInvalidOldPassword  = errors.New("old password is incorrect")
 	ErrSamePassword        = errors.New("new password must be different from old password")
+	ErrInvalidResetToken   = errors.New("invalid or expired reset token")
+	ErrUserNotFound        = errors.New("user not found")
 )
 
 type AuthService interface {
@@ -33,6 +37,8 @@ type AuthService interface {
 	Logout(ctx context.Context, userID, tokenID string) error
 	LogoutAll(ctx context.Context, userID string) error
 	ChangePassword(ctx context.Context, userID string, req *dto.ChangePasswordRequest) error
+	ForgotPassword(ctx context.Context, email string) (string, error)
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 type authService struct {
@@ -239,6 +245,60 @@ func (s *authService) ChangePassword(ctx context.Context, userID string, req *dt
 		// Log tapi jangan gagalkan — password sudah berubah
 		fmt.Printf("Warning: failed to revoke tokens after password change: %v\n", err)
 	}
+
+	return nil
+}
+
+func (s *authService) ForgotPassword(ctx context.Context, email string) (string, error) {
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return "", ErrUserNotFound
+	}
+
+	if !user.IsActive {
+		return "", ErrAccountDeactivated
+	}
+
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(1 * time.Hour)
+
+	if err := s.tokenRepo.SetResetToken(ctx, token, user.ID, expiresAt); err != nil {
+		return "", fmt.Errorf("failed to store reset token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (s *authService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	data, err := s.tokenRepo.GetResetToken(ctx, token)
+	if err != nil {
+		return ErrInvalidResetToken
+	}
+
+	var payload struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.Unmarshal([]byte(data), &payload); err != nil {
+		return fmt.Errorf("failed to parse reset token: %w", err)
+	}
+
+	user, err := s.userRepo.FindByID(ctx, payload.UserID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	hashedPassword, err := sharedHelper.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user.Password = hashedPassword
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	_ = s.tokenRepo.DeleteResetToken(ctx, token)
+	_ = s.tokenRepo.DeleteAllUserRefreshTokens(ctx, user.ID)
 
 	return nil
 }
