@@ -159,18 +159,12 @@ func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 		return helper.ValidationErrorResponse(c, validationErrors)
 	}
 
-	token, err := h.service.ForgotPassword(c.Context(), req.Email)
+	err := h.service.ForgotPassword(c.Context(), req.Email)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) || errors.Is(err, service.ErrAccountDeactivated) {
-			return helper.SuccessResponse(c, fiber.StatusOK, "If an account with that email exists, a reset token has been generated.", nil)
-		}
 		return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to process request", err.Error())
 	}
 
-	return helper.SuccessResponse(c, fiber.StatusOK, "Reset token generated successfully", fiber.Map{
-		"token":   token,
-		"message": "Use this token to reset your password. In production, this would be sent via email.",
-	})
+	return helper.SuccessResponse(c, fiber.StatusOK, "If an account with that email exists, a reset link has been sent.", nil)
 }
 
 func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {

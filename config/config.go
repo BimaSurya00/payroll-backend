@@ -14,6 +14,7 @@ type Config struct {
 	JWT      JWTConfig
 	CORS     CORSConfig
 	MinIO    MinIOConfig
+	Email    EmailConfig
 }
 
 type AppConfig struct {
@@ -58,6 +59,12 @@ type MinIOConfig struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+}
+
+type EmailConfig struct {
+	ResendAPIKey string
+	From         string
+	AppURL       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -118,6 +125,11 @@ func LoadConfig() (*Config, error) {
 			SecretKey: viper.GetString("MINIO_SECRET_KEY"),
 			Bucket:    viper.GetString("MINIO_BUCKET"),
 			UseSSL:    viper.GetBool("MINIO_USE_SSL"),
+		},
+		Email: EmailConfig{
+			ResendAPIKey: viper.GetString("RESEND_API_KEY"),
+			From:         viper.GetString("RESEND_FROM"),
+			AppURL:       viper.GetString("APP_URL"),
 		},
 	}
 

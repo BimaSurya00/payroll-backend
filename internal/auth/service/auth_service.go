@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"hris/config"
 	"hris/internal/auth/dto"
 	"hris/internal/auth/helper"
@@ -16,6 +17,7 @@ import (
 	"hris/internal/user/entity"
 	userRepo "hris/internal/user/repository"
 	"hris/shared/constants"
+	sharedEmail "hris/shared/email"
 	sharedHelper "hris/shared/helper"
 )
 
@@ -37,7 +39,7 @@ type AuthService interface {
 	Logout(ctx context.Context, userID, tokenID string) error
 	LogoutAll(ctx context.Context, userID string) error
 	ChangePassword(ctx context.Context, userID string, req *dto.ChangePasswordRequest) error
-	ForgotPassword(ctx context.Context, email string) (string, error)
+	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
@@ -249,24 +251,32 @@ func (s *authService) ChangePassword(ctx context.Context, userID string, req *dt
 	return nil
 }
 
-func (s *authService) ForgotPassword(ctx context.Context, email string) (string, error) {
+func (s *authService) ForgotPassword(ctx context.Context, email string) error {
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", ErrUserNotFound
+		return nil
 	}
 
 	if !user.IsActive {
-		return "", ErrAccountDeactivated
+		return nil
 	}
 
 	token := uuid.New().String()
 	expiresAt := time.Now().Add(1 * time.Hour)
 
 	if err := s.tokenRepo.SetResetToken(ctx, token, user.ID, expiresAt); err != nil {
-		return "", fmt.Errorf("failed to store reset token: %w", err)
+		return fmt.Errorf("failed to store reset token: %w", err)
 	}
 
-	return token, nil
+	emailSvc := sharedEmail.GetService()
+	if emailSvc != nil {
+		if err := emailSvc.SendPasswordReset(email, user.Name, token); err != nil {
+			zap.L().Error("failed to send password reset email", zap.Error(err))
+			return fmt.Errorf("failed to send reset email: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *authService) ResetPassword(ctx context.Context, token, newPassword string) error {

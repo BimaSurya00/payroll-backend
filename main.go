@@ -31,6 +31,7 @@ import (
 	"hris/internal/schedule"
 	"hris/internal/user"
 	"hris/middleware"
+	"hris/shared/email"
 	sharedHelper "hris/shared/helper"
 	"hris/shared/validator"
 )
@@ -96,6 +97,12 @@ func main() {
 	}
 
 	minioRepo := minio.NewMinioRepository(minioClientInstance, cfg.MinIO.Endpoint)
+
+	if cfg.Email.ResendAPIKey != "" {
+		email.Init(cfg.Email)
+	} else {
+		zap.L().Warn("RESEND_API_KEY not set, email service disabled")
+	}
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
