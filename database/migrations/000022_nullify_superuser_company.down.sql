@@ -1,0 +1,1 @@
+UPDATE users SET company_id = '00000000-0000-0000-0000-000000000001' WHERE role = 'SUPER_USER' AND company_id IS NULL;
