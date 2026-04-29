@@ -22,5 +22,5 @@ type CreateEmployeeRequest struct {
 	JobLevel           string  `json:"jobLevel" validate:"required,oneof=CEO MANAGER SUPERVISOR STAFF"`
 	Gender             string  `json:"gender" validate:"required,oneof=MALE FEMALE"`
 	Division           string  `json:"division" validate:"omitempty,max=100"` // Deprecated, use departmentId
-	DepartmentID       string  `json:"departmentId" validate:"omitempty,uuid"`
+	DepartmentID       string  `json:"departmentId" validate:"required,uuid"`
 }

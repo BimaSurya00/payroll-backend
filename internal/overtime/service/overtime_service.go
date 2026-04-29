@@ -69,21 +69,41 @@ func NewOvertimeService(
 }
 
 func (s *overtimeService) CreateOvertimeRequest(ctx context.Context, userID string, req *dto.CreateOvertimeRequestRequest) (*dto.OvertimeRequestResponse, error) {
-	// Find employee by userID
+	// Get the user who is making the request
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 
-	employee, err := s.employeeRepo.FindByUserID(ctx, userUUID)
-	if err != nil {
-		return nil, fmt.Errorf("employee not found: %w", err)
-	}
-
-	// Get user
-	user, err := s.userRepo.FindByID(ctx, userID)
+	reqUser, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	var employee *employeerepo.EmployeeWithUser
+
+	// Check if this is an Admin Proxy request
+	if req.EmployeeID != "" && (reqUser.Role == "ADMIN" || reqUser.Role == "SUPER_USER") {
+		targetEmployeeUUID, err := uuid.Parse(req.EmployeeID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid employee ID format: %w", err)
+		}
+		employee, err = s.employeeRepo.FindByID(ctx, targetEmployeeUUID)
+		if err != nil {
+			return nil, fmt.Errorf("target employee not found: %w", err)
+		}
+	} else {
+		// Normal self-service flow
+		employee, err = s.employeeRepo.FindByUserID(ctx, userUUID)
+		if err != nil {
+			return nil, fmt.Errorf("employee not found: %w", err)
+		}
+	}
+
+	// Get the actual employee's user info for the response
+	targetUser, err := s.userRepo.FindByID(ctx, employee.UserID.String())
+	if err != nil {
+		return nil, fmt.Errorf("target user not found: %w", err)
 	}
 
 	// Parse and validate date
@@ -156,7 +176,7 @@ func (s *overtimeService) CreateOvertimeRequest(ctx context.Context, userID stri
 		return nil, fmt.Errorf("failed to create overtime request: %w", err)
 	}
 
-	return s.toOvertimeRequestResponse(overtimeRequest, user.Name, user.Email, employee.Position, policy), nil
+	return s.toOvertimeRequestResponse(overtimeRequest, targetUser.Name, targetUser.Email, employee.Position, policy), nil
 }
 
 func (s *overtimeService) GetMyOvertimeRequests(ctx context.Context, userID string, page, perPage int) ([]dto.OvertimeRequestResponse, int64, error) {

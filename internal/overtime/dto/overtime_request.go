@@ -6,6 +6,7 @@ type CreateOvertimeRequestRequest struct {
 	EndTime          string  `json:"endTime" validate:"required"`   // Format: HH:MM
 	Reason           string  `json:"reason" validate:"required,min=10,max=1000"`
 	OvertimePolicyID string  `json:"overtimePolicyId" validate:"required,uuid"`
+	EmployeeID       string  `json:"employeeId" validate:"omitempty,uuid"` // For Admin proxy
 }
 
 type UpdateOvertimeRequestRequest struct {
